@@ -1,0 +1,25 @@
+node_modules
+.next
+.next/cache
+out
+dist
+.turbo
+.vercel
+
+.env
+.env.local
+.env.*.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.DS_Store
+Thumbs.db
+
+coverage
+*.log
+
+# Drizzle migration meta — keep migrations themselves
+drizzle/meta/_snapshot.json

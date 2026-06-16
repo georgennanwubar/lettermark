@@ -1,0 +1,62 @@
+# docker-compose.yml — One-command self-host: web + worker + postgres.
+#
+# Quick start:
+#   1. Copy .env.example to .env and fill in SESSION_SECRET, TRACKING_SECRET.
+#   2. `docker compose up -d --build`
+#   3. `docker compose run --rm web pnpm db:migrate`
+#   4. (optional) `docker compose run --rm web pnpm db:seed`
+#   5. Visit http://localhost:3000 and log in.
+
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: newsletter
+      POSTGRES_USER: newsletter
+      POSTGRES_PASSWORD: newsletter
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U newsletter -d newsletter"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://newsletter:newsletter@postgres:5432/newsletter
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+
+  worker:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      web:
+        condition: service_started
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://newsletter:newsletter@postgres:5432/newsletter
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      NODE_ENV: production
+    # Run the worker script via tsx (no compile step needed for it)
+    command: ["node", "--experimental-strip-types", "scripts/worker.ts"]
+
+volumes:
+  postgres_data:
