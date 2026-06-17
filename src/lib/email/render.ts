@@ -19,6 +19,16 @@ function attr(value: string | number | undefined, fallback = ''): string {
   return String(value).replace(/"/g, '&quot;');
 }
 
+/**
+ * Render a complete ` name="value"` attribute, or nothing at all when the
+ * value is unset — MJML's validator flags empty color/font-family attrs as
+ * invalid, and they should fall back to the <mj-attributes> defaults anyway.
+ */
+function optAttr(name: string, value: string | number | undefined): string {
+  if (value === undefined || value === null || value === '') return '';
+  return ` ${name}="${String(value).replace(/"/g, '&quot;')}"`;
+}
+
 /** Convert one block to MJML. Sections must wrap their children in columns. */
 function blockToMjml(block: AnyBlock, depth = 0): string {
   switch (block.type) {
@@ -49,14 +59,14 @@ function blockToMjml(block: AnyBlock, depth = 0): string {
     case 'heading': {
       const { level, text, align, color, fontFamily, fontSize, fontWeight } = block.attrs;
       const defaultSize = { 1: 28, 2: 22, 3: 18, 4: 16 }[level] ?? 22;
-      return `<mj-text align="${attr(align, 'left')}" color="${attr(color)}" font-family="${attr(fontFamily)}" font-size="${fontSize ?? defaultSize}px" font-weight="${fontWeight ?? 700}" line-height="1.25" padding-bottom="12px">
+      return `<mj-text align="${attr(align, 'left')}"${optAttr('color', color)}${optAttr('font-family', fontFamily)} font-size="${fontSize ?? defaultSize}px" font-weight="${fontWeight ?? 700}" line-height="1.25" padding-bottom="12px">
 <h${level} style="margin:0;font-size:inherit;font-weight:inherit;color:inherit;">${escapeHtml(text)}</h${level}>
 </mj-text>`;
     }
 
     case 'text': {
       const { html, align, color, fontSize, lineHeight } = block.attrs;
-      return `<mj-text align="${attr(align, 'left')}" color="${attr(color)}" font-size="${fontSize ?? 16}px" line-height="${lineHeight ?? 1.6}" padding-bottom="12px">${html}</mj-text>`;
+      return `<mj-text align="${attr(align, 'left')}"${optAttr('color', color)} font-size="${fontSize ?? 16}px" line-height="${lineHeight ?? 1.6}" padding-bottom="12px">${html}</mj-text>`;
     }
 
     case 'button': {
@@ -130,9 +140,9 @@ function escapeHtml(s: string): string {
  * The HTML still contains unresolved merge tags ({firstname}, {unsubscribe}, …)
  * — those get filled in later by `replaceMergeTags()` per-subscriber.
  */
-export function renderEmail(
+export async function renderEmail(
   doc: EmailDocument
-): { html: string; text: string; mjml: string; errors: unknown[] } {
+): Promise<{ html: string; text: string; mjml: string; errors: unknown[] }> {
   const c = doc.root.attrs ?? {};
   const preheader = c.preheader
     ? `<mj-raw><div style="display:none;font-size:1px;color:#ffffff;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">${escapeHtml(c.preheader)}</div></mj-raw>`
@@ -158,7 +168,7 @@ export function renderEmail(
   </mj-body>
 </mjml>`;
 
-  const compiled = mjml2html(mjml, { validationLevel: 'soft', minify: true });
+  const compiled = await mjml2html(mjml, { validationLevel: 'soft', minify: true });
   const text = htmlToText(compiled.html, {
     wordwrap: 80,
     selectors: [

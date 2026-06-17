@@ -1,5 +1,53 @@
 # Handover note for Claude Code
 
+## Updated 2026-06-16 — GOD MODE code review by Claude Code
+
+The full pass below was completed on 2026-06-16. The original "before a first compile" state is now **fully resolved**. Key changes:
+
+**Dependencies fixed:**
+- Upgraded `drizzle-kit` `0.19.x` → `0.31.10` to match `drizzle.config.ts`'s `dialect: "postgresql"` syntax (old version only knew `generate:pg`).
+- Upgraded `@types/react`/`@types/react-dom` 18→19 to match React 19 runtime.
+- Upgraded `eslint-config-next` 15→16 to match Next.js 16. Replaced removed `next lint` CLI command with `eslint .` script, created `eslint.config.mjs` flat config (required for ESLint 9).
+- Moved `pg` to `dependencies` (runtime), keeping other test tooling in `devDependencies`.
+- Pinned `react`/`react-dom` to `^19.0.0` (removed stale `-rc` prerelease tag).
+
+**Functional bugs fixed:**
+1. **Email render broken** — `mjml2html` is `async` in v5 but `render.ts` called it synchronously. Fixed: `renderEmail` is now `async`, all callers `await` it. Previously every send/preview returned broken HTML.
+2. **Confirmation emails broken** — `/api/subscribe`'s `sendConfirmationEmail` passed `to: opts.to` (bare email string) where every provider's `send()` expects `to: { email, name? }`. Fixed.
+3. **Hosted subscribe form showed raw JSON** — All plain `<form method="post">` submissions to `/api/subscribe` (embed snippet's HTML form AND the hosted `/subscribe/[formId]` page) navigated to a bare JSON response. Fixed: detect `Accept: text/html` headers (plain browser POSTs) and 303 redirect to `/subscribe/{formId}?status={pending|subscribed}` instead. Added `status=error` handling in the page too.
+4. **Automation triggers never fired** — `enrollSubscriber()` was exported but never called from anywhere. Automations were 100% dead. Fixed: added `triggerWorkflows()` helper to `runner.ts`, wired 'signup' trigger in `/api/subscribe` (no-double-opt-in path) and `/confirm/page.tsx` (double-opt-in confirmed path), wired 'list-added'/'tag-added' triggers in `/api/subscribe`'s target-list/tag assignment loops.
+5. **Soft-bounce escalation bug** — `webhook-utils.ts` set `status: 'soft_bounced'` after ≥3 soft bounces (comment said "treat as hard"), and never set `soft_bounced` for <3 bounces. Fixed: now sets `soft_bounced` immediately on any soft bounce, escalates to `hard_bounced` at ≥3.
+6. **Missing /profile route** — `{profile}` merge tag resolves to `/profile?s=&t=` but no page existed. Built complete: signature validation (payload = just `subscriberHash`, matching `tracking.ts`), name-edit form, unsubscribeUrl link using the proper unsubscribe HMAC (not the profile sig), + `actions.ts`.
+7. **Worker Docker command broken** — `docker-compose.yml` used `node --experimental-strip-types` (Node 22.6+ only) against a Node 20 base image. Fixed: `node_modules/.bin/tsx scripts/worker.ts`.
+8. **MJML empty color/font-family attributes** — `render.ts` emitted `color=""` / `font-family=""` when blocks had no explicit color set (the common case), which MJML flagged as invalid and which could interfere with inherited `<mj-attributes>` defaults. Fixed: added `optAttr()` helper that omits the attribute entirely when value is empty/undefined.
+9. **Dead /forgot link** — Login form had `<Link href="/forgot">Forgot?</Link>` but no password-reset route exists. Removed the dead link.
+
+**TypeScript errors fixed:**
+- `useActionState` initial state type mismatches across all 7 action forms (subscribers, lists, tags, forms, automations, settings account, import). Added explicit `XActionState` types to every action, removed all `as any` casts.
+- `BlockWithChildren` interface tried to `extend` a union type (TS2312). Removed the interface; `AnyBlock` already has `children?: AnyBlock[]` on every variant.
+- `number[] | null` not assignable to `number[]` in campaign editor (null narrowing gap). Fixed with `selected &&` guard.
+
+**ESLint errors fixed:**
+- New `react-hooks/set-state-in-effect` rule (react-hooks v7) flagged 5 places. Fixed properly: workflow-editor JSON parsing uses `useMemo` instead of effect, delivery-form kind-change uses "adjust state during render" pattern, create-tag/list modal-close uses same pattern, campaign-editor preview effect's synchronous setState calls moved to inside setTimeout callback or replaced by the `updateDoc` wrapper that sets dirty at the edit call site.
+
+**Current state:**
+- `pnpm typecheck`: zero errors.
+- `pnpm lint`: zero errors/warnings.
+- `pnpm build`: all 39 routes compile and emit.
+- `pnpm db:generate`: migration generated at `drizzle/0000_nifty_legion.sql`.
+- `pnpm db:migrate` + `pnpm db:seed`: verified on live Postgres (embedded-postgres 18.4 for local test).
+- End-to-end browser verification (Playwright + Chrome Headless Shell, production build via `node .next/standalone/server.js`): login, dashboard, campaign editor + MJML preview, settings/delivery tab, sign-out, hosted subscribe form → redirect, /profile valid + invalid signature. All passed.
+
+**Verified-non-issues (CLAUDE.md items that turned out fine):**
+- `useActionState` from `react` not `react-dom`: all imports already correct.
+- `DropdownMenuItem asChild` with `<form>`: tested live — sign-out works correctly. Radix Slot handles this fine.
+- `Buffer/Uint8Array` pixel response: `new Uint8Array(PIXEL)` returns a valid GIF in Next 16, confirmed.
+- `requireAuth()` in route handlers: never used in `/api/*` routes, only in dashboard server components/actions. Non-issue.
+
+**Do NOT re-run first-compile steps.** The code is already compiled and verified. Start with `pnpm dev` for development or `node .next/standalone/server.js` for production (after `pnpm build`).
+
+---
+
 This is a handover for the **Postmark newsletter platform** project. The codebase is in the `newsletter-app` zip. Put this file at the project root as `CLAUDE.md` so it's auto-loaded as context.
 
 You are picking up an in-progress build that was paused before a first successful compile. Read this entire document before touching code. The README, ARCHITECTURE.md, and DEPLOYMENT.md are also worth a quick scan but they describe the *intended* state, not the current state.

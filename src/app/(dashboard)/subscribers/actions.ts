@@ -19,7 +19,12 @@ const createSchema = z.object({
   status: z.enum(['pending', 'subscribed', 'unsubscribed']).default('subscribed'),
 });
 
-export async function createSubscriber(_prev: any, formData: FormData) {
+export type SubscriberActionState = { ok: boolean; error?: string };
+
+export async function createSubscriber(
+  _prev: SubscriberActionState,
+  formData: FormData,
+): Promise<SubscriberActionState> {
   const { account } = await requireAuth();
   const parsed = createSchema.safeParse({
     email: formData.get('email'),
@@ -81,7 +86,17 @@ export async function unsubscribeSubscriber(formData: FormData) {
  * Import from raw CSV text. Expected columns include "email" (required) and
  * any of: first_name/firstName, last_name/lastName, status. Header row required.
  */
-export async function importSubscribers(_prev: any, formData: FormData) {
+export type ImportActionState = {
+  ok: boolean;
+  error?: string;
+  inserted?: number;
+  skipped?: number;
+};
+
+export async function importSubscribers(
+  _prev: ImportActionState,
+  formData: FormData,
+): Promise<ImportActionState> {
   const { account } = await requireAuth();
   const csv = String(formData.get('csv') || '').trim();
   if (!csv) return { ok: false, error: 'Paste some CSV data first.' };

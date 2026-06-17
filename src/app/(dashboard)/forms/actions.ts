@@ -30,7 +30,9 @@ const createSchema = z.object({
   doubleOptIn: z.coerce.boolean().default(true),
 });
 
-export async function createForm(_prev: any, formData: FormData) {
+export type FormActionState = { ok: boolean; error?: string };
+
+export async function createForm(_prev: FormActionState, formData: FormData): Promise<FormActionState> {
   const { account } = await requireAuth();
   const parsed = createSchema.safeParse({
     name: formData.get('name'),

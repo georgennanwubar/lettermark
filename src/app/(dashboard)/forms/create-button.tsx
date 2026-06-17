@@ -14,7 +14,7 @@ import { createForm } from "./actions";
 
 export function CreateFormButton() {
   const [open, setOpen] = React.useState(false);
-  const [state, action, pending] = useActionState(createForm, { ok: false } as any);
+  const [state, action, pending] = useActionState(createForm, { ok: false });
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button><Plus className="mr-1 h-4 w-4" />New form</Button></DialogTrigger>

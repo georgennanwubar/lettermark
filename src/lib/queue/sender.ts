@@ -201,7 +201,7 @@ export async function drainOnce(opts: DrainOptions = {}): Promise<DrainResult> {
     }
 
     // Render the campaign once into HTML/text with merge tags still inside.
-    const rendered = renderEmail(camp.contentJson as EmailDocument);
+    const rendered = await renderEmail(camp.contentJson as EmailDocument);
 
     // Build / fetch link rows for the campaign so click-tracking IDs are stable.
     // (Naive version: regex every URL out of the HTML and upsert.)

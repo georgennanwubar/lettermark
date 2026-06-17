@@ -11,8 +11,12 @@ import { createTag } from "./actions";
 
 export function CreateTagButton() {
   const [open, setOpen] = React.useState(false);
-  const [state, action, pending] = useActionState(createTag, { ok: false } as any);
-  React.useEffect(() => { if (state?.ok) setOpen(false); }, [state]);
+  const [state, action, pending] = useActionState(createTag, { ok: false });
+  const [prevState, setPrevState] = React.useState(state);
+  if (state !== prevState) {
+    setPrevState(state);
+    if (state.ok) setOpen(false);
+  }
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>

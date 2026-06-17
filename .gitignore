@@ -21,5 +21,9 @@ Thumbs.db
 coverage
 *.log
 
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
 # Drizzle migration meta — keep migrations themselves
 drizzle/meta/_snapshot.json

@@ -4,7 +4,6 @@
  */
 "use client";
 import { useActionState } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { loginAction, type AuthActionState } from "@/lib/auth/actions";
@@ -24,10 +23,7 @@ export function LoginForm() {
         )}
       </div>
       <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="password">Password</Label>
-          <Link href="/forgot" className="text-xs text-muted-foreground hover:text-foreground">Forgot?</Link>
-        </div>
+        <Label htmlFor="password">Password</Label>
         <Input id="password" name="password" type="password" autoComplete="current-password" required />
         {state.fieldErrors?.password && (
           <p className="text-xs text-destructive">{state.fieldErrors.password}</p>

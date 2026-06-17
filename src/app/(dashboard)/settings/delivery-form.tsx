@@ -42,14 +42,14 @@ export function DeliveryForm({ initial }: Props) {
   const [name, setName] = React.useState(initial?.name ?? "Primary provider");
   const [creds, setCreds] = React.useState<Record<string, string>>(initial?.credentials ?? {});
   const [saving, setSaving] = React.useState(false);
+  const [prevKind, setPrevKind] = React.useState(kind);
 
-  React.useEffect(() => {
-    if (initial && (initial.kind as Kind) === kind) return;
-    // Reset creds when kind changes to a different provider
-    if (!initial || initial.kind !== kind) {
-      setCreds((c) => (Object.keys(c).length === 0 ? c : {}));
-    }
-  }, [kind, initial]);
+  if (kind !== prevKind) {
+    setPrevKind(kind);
+    // Restore the saved credentials if switching back to the originally loaded
+    // provider, otherwise start fresh for the newly selected provider.
+    setCreds(initial && initial.kind === kind ? initial.credentials : {});
+  }
 
   const fields = FIELDS_BY_KIND[kind];
 

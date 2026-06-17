@@ -73,8 +73,6 @@ function newBlock(type: BlockType): AnyBlock {
   return { id, type, attrs: defaultAttrsFor(type) } as AnyBlock;
 }
 
-interface BlockWithChildren extends AnyBlock { children?: AnyBlock[] }
-
 /** Pure helpers — operate on the document tree without mutating. */
 function updateAtPath(doc: EmailDocument, path: number[], patcher: (b: any) => any): EmailDocument {
   const clone = structuredClone(doc) as EmailDocument;
@@ -145,11 +143,16 @@ export function CampaignEditor({ campaign, initialDocument }: Props) {
   const [saving, setSaving] = React.useState(false);
   const [dirty, setDirty] = React.useState(false);
 
+  /** All block-tree edits go through here so "dirty" is set at the point of change. */
+  const updateDoc = React.useCallback((next: EmailDocument) => {
+    setDirty(true);
+    setDoc(next);
+  }, []);
+
   /** Re-render preview whenever the doc changes (debounced). */
   React.useEffect(() => {
-    setDirty(true);
-    setPreviewing(true);
     const t = setTimeout(async () => {
+      setPreviewing(true);
       try {
         const res = await fetch("/api/preview", {
           method: "POST",
@@ -271,10 +274,10 @@ export function CampaignEditor({ campaign, initialDocument }: Props) {
                           const section = newBlock("section") as any;
                           const newDoc = insertChild(doc, [], section);
                           target = section;
-                          setDoc(insertChild(newDoc, [newDoc.root.children.length - 1], newBlock(b.type)));
+                          updateDoc(insertChild(newDoc, [newDoc.root.children.length - 1], newBlock(b.type)));
                         } else {
                           const idx = root.children.indexOf(target);
-                          setDoc(insertChild(doc, [idx], newBlock(b.type)));
+                          updateDoc(insertChild(doc, [idx], newBlock(b.type)));
                         }
                       }}
                       className="flex flex-col items-center gap-1 rounded-md border border-border bg-background p-2.5 text-xs transition-colors hover:bg-secondary"
@@ -286,7 +289,7 @@ export function CampaignEditor({ campaign, initialDocument }: Props) {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setDoc(insertChild(doc, [], newBlock("section")))}
+                  onClick={() => updateDoc(insertChild(doc, [], newBlock("section")))}
                   className="mt-2 flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border p-2 text-xs text-muted-foreground hover:bg-secondary"
                 >
                   <Plus className="h-3.5 w-3.5" />Add new section
@@ -300,18 +303,18 @@ export function CampaignEditor({ campaign, initialDocument }: Props) {
                   path={[]}
                   selected={selected}
                   onSelect={setSelected}
-                  onMove={(p, d) => setDoc(moveAtPath(doc, p, d))}
-                  onRemove={(p) => { setDoc(removeAtPath(doc, p)); setSelected(null); }}
+                  onMove={(p, d) => updateDoc(moveAtPath(doc, p, d))}
+                  onRemove={(p) => { updateDoc(removeAtPath(doc, p)); setSelected(null); }}
                 />
               </div>
 
-              {selectedBlock && (
+              {selectedBlock && selected && (
                 <div className="mt-4 space-y-2 border-t border-border pt-4">
                   <div className="px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Edit block</div>
                   <BlockInspector
                     block={selectedBlock}
                     onChange={(attrs) =>
-                      setDoc(updateAtPath(doc, selected, (b: any) => ({ ...b, attrs: { ...b.attrs, ...attrs } })))
+                      updateDoc(updateAtPath(doc, selected, (b: any) => ({ ...b, attrs: { ...b.attrs, ...attrs } })))
                     }
                   />
                 </div>
@@ -375,7 +378,7 @@ function BlockTree({
   onRemove: (p: number[]) => void;
 }) {
   const isSelected = selected && selected.length === path.length && selected.every((v, i) => v === path[i]);
-  const children = (block as BlockWithChildren).children;
+  const children = block.children;
 
   return (
     <div className="space-y-0.5">

@@ -25,6 +25,7 @@ import {
 import { generateSubscriberHash } from "@/lib/utils/hash";
 import { signTracking } from "@/lib/email/tracking";
 import { makeEnvProvider } from "@/lib/email/providers";
+import { triggerWorkflows } from "@/lib/automation/runner";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,7 +40,18 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS });
 }
 
+/**
+ * True for a plain browser <form method="post"> submission (no JS) — those
+ * navigate the whole page, so they need an HTTP redirect back to somewhere
+ * sensible instead of a JSON body the visitor would otherwise stare at.
+ * fetch()-based callers (the JS embed widgets) ask for JSON explicitly.
+ */
+function wantsHtml(req: NextRequest): boolean {
+  return (req.headers.get("accept") ?? "").includes("text/html");
+}
+
 export async function POST(req: NextRequest) {
+  const htmlSubmit = wantsHtml(req);
   let body: Record<string, any>;
   const contentType = req.headers.get("content-type") || "";
   try {
@@ -56,17 +68,17 @@ export async function POST(req: NextRequest) {
   const email = String(body.email || "").trim().toLowerCase();
   const formId = Number(body.formId);
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    return json({ ok: false, error: "invalid email" }, 400);
+    return fail(req, htmlSubmit, Number.isFinite(formId) ? formId : null, "invalid email", 400);
   }
   if (!Number.isFinite(formId)) {
     return json({ ok: false, error: "missing form" }, 400);
   }
 
   const form = await db.query.forms.findFirst({ where: eq(forms.id, formId) });
-  if (!form) return json({ ok: false, error: "form not found" }, 404);
+  if (!form) return fail(req, htmlSubmit, formId, "form not found", 404);
 
   const account = await db.query.accounts.findFirst({ where: eq(accounts.id, form.accountId) });
-  if (!account) return json({ ok: false, error: "form not found" }, 404);
+  if (!account) return fail(req, htmlSubmit, formId, "form not found", 404);
 
   // Extract custom fields from body — anything not first-class becomes JSONB
   const firstName = body.firstName ? String(body.firstName).slice(0, 191) : null;
@@ -77,8 +89,14 @@ export async function POST(req: NextRequest) {
     if (!reservedKeys.has(k)) customFields[k] = v;
   }
 
-  // Honeypot — bots fill hidden fields named _honeypot. If non-empty, silently 200.
+  // Honeypot — bots fill hidden fields named _honeypot. If non-empty, silently pretend success.
   if (body._honeypot) {
+    if (htmlSubmit) {
+      return NextResponse.redirect(new URL(`/subscribe/${form.id}?status=pending`, req.url), {
+        status: 303,
+        headers: CORS,
+      });
+    }
     return json({ ok: true, status: "pending" }, 200);
   }
 
@@ -90,6 +108,7 @@ export async function POST(req: NextRequest) {
     where: and(eq(subscribers.accountId, account.id), eq(subscribers.email, email)),
   });
 
+  const isNewSubscriber = !existing;
   let subscriber;
   if (existing) {
     // Re-subscribing? Restore to pending/subscribed but don't overwrite a healthy record
@@ -128,12 +147,26 @@ export async function POST(req: NextRequest) {
   // Add to target lists / tags (idempotent — relies on PK conflict)
   if (form.targetLists?.length) {
     for (const listId of form.targetLists) {
-      await db.insert(listSubscribers).values({ listId, subscriberId: subscriber.id }).onConflictDoNothing();
+      const [added] = await db
+        .insert(listSubscribers)
+        .values({ listId, subscriberId: subscriber.id })
+        .onConflictDoNothing()
+        .returning({ listId: listSubscribers.listId });
+      if (added) {
+        await triggerWorkflows(account.id, "list-added", subscriber.id, (cfg) => Number(cfg?.listId) === listId);
+      }
     }
   }
   if (form.targetTags?.length) {
     for (const tagId of form.targetTags) {
-      await db.insert(tagSubscribers).values({ tagId, subscriberId: subscriber.id }).onConflictDoNothing();
+      const [added] = await db
+        .insert(tagSubscribers)
+        .values({ tagId, subscriberId: subscriber.id })
+        .onConflictDoNothing()
+        .returning({ tagId: tagSubscribers.tagId });
+      if (added) {
+        await triggerWorkflows(account.id, "tag-added", subscriber.id, (cfg) => Number(cfg?.tagId) === tagId);
+      }
     }
   }
 
@@ -152,20 +185,35 @@ export async function POST(req: NextRequest) {
     });
   } else if (subscriber.status === "subscribed") {
     await db.update(forms).set({ conversions: sql`${forms.conversions} + 1` }).where(eq(forms.id, form.id));
+    // No double opt-in: this request is the moment of signup completion.
+    if (isNewSubscriber) {
+      await triggerWorkflows(account.id, "signup", subscriber.id);
+    }
   }
 
-  return json(
-    {
-      ok: true,
-      status: subscriber.status,
-      redirect: form.doubleOptIn ? null : form.successUrl ?? null,
-    },
-    200,
-  );
+  const redirectTarget = form.doubleOptIn ? null : form.successUrl ?? null;
+
+  if (htmlSubmit) {
+    const dest = redirectTarget ?? `/subscribe/${form.id}?status=${subscriber.status}`;
+    return NextResponse.redirect(new URL(dest, req.url), { status: 303, headers: CORS });
+  }
+
+  return json({ ok: true, status: subscriber.status, redirect: redirectTarget }, 200);
 }
 
 function json(payload: unknown, status = 200) {
   return NextResponse.json(payload, { status, headers: CORS });
+}
+
+/** Error response: redirect a plain-form submitter back with ?status=error, else JSON. */
+function fail(req: NextRequest, htmlSubmit: boolean, formId: number | null, error: string, status: number) {
+  if (htmlSubmit && formId != null) {
+    return NextResponse.redirect(new URL(`/subscribe/${formId}?status=error`, req.url), {
+      status: 303,
+      headers: CORS,
+    });
+  }
+  return json({ ok: false, error }, status);
 }
 
 async function sendConfirmationEmail(opts: {
@@ -192,7 +240,7 @@ async function sendConfirmationEmail(opts: {
     const provider = makeEnvProvider();
     await provider.send({
       from: { email: opts.fromEmail, name: opts.fromName },
-      to: opts.to,
+      to: { email: opts.to },
       subject: `Confirm your subscription to ${opts.accountName}`,
       html,
       text,

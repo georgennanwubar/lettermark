@@ -55,8 +55,10 @@ services:
       DATABASE_URL: postgres://newsletter:newsletter@postgres:5432/newsletter
       APP_URL: ${APP_URL:-http://localhost:3000}
       NODE_ENV: production
-    # Run the worker script via tsx (no compile step needed for it)
-    command: ["node", "--experimental-strip-types", "scripts/worker.ts"]
+    # Run the worker script via tsx (no compile step needed for it).
+    # Node 20 (the image's base) doesn't support --experimental-strip-types
+    # (that needs Node 22.6+), so invoke the locally installed tsx binary directly.
+    command: ["node_modules/.bin/tsx", "scripts/worker.ts"]
 
 volumes:
   postgres_data:

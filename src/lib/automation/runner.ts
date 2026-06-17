@@ -50,6 +50,30 @@ function nodeById(graph: WorkflowGraph, id: string | null | undefined): Workflow
   return graph.nodes.find((n) => n.id === id) ?? null;
 }
 
+/**
+ * Find active workflows in this account whose trigger matches `type`
+ * (optionally narrowed by `matchConfig`) and enroll the subscriber in each.
+ * Called from the places where the real-world event happens (signup,
+ * confirm, tag/list assignment) — the runner itself never originates these.
+ */
+export async function triggerWorkflows(
+  accountId: number,
+  type: string,
+  subscriberId: number,
+  matchConfig?: (config: any) => boolean,
+) {
+  const active = await db.query.workflows.findMany({
+    where: and(eq(workflows.accountId, accountId), eq(workflows.status, 'active')),
+  });
+  for (const wf of active) {
+    const graph = wf.graph as WorkflowGraph;
+    const matches = graph.triggers?.some(
+      (t) => t.type === type && (!matchConfig || matchConfig(t.config)),
+    );
+    if (matches) await enrollSubscriber(wf.id, subscriberId);
+  }
+}
+
 /** Enroll a subscriber into a workflow (idempotent if already enrolled). */
 export async function enrollSubscriber(workflowId: number, subscriberId: number) {
   const wf = await db.query.workflows.findFirst({ where: eq(workflows.id, workflowId) });

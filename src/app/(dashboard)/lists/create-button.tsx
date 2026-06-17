@@ -11,11 +11,13 @@ import { createList } from "./actions";
 
 export function CreateListButton() {
   const [open, setOpen] = React.useState(false);
-  const [state, action, pending] = useActionState(createList, { ok: false } as any);
+  const [state, action, pending] = useActionState(createList, { ok: false });
 
-  React.useEffect(() => {
-    if (state?.ok) setOpen(false);
-  }, [state]);
+  const [prevState, setPrevState] = React.useState(state);
+  if (state !== prevState) {
+    setPrevState(state);
+    if (state.ok) setOpen(false);
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

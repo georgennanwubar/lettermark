@@ -20,17 +20,14 @@ export function WorkflowEditor({ workflow }: Props) {
   const [status, setStatus] = React.useState(workflow.status);
   const [graphText, setGraphText] = React.useState(JSON.stringify(workflow.graph, null, 2));
   const [saving, setSaving] = React.useState(false);
-  const [parsed, setParsed] = React.useState<any>(workflow.graph);
-  const [parseError, setParseError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
+  const { parsed, parseError } = React.useMemo(() => {
     try {
-      setParsed(JSON.parse(graphText));
-      setParseError(null);
+      return { parsed: JSON.parse(graphText), parseError: null as string | null };
     } catch (e: any) {
-      setParseError(e.message);
+      return { parsed: workflow.graph, parseError: e.message as string };
     }
-  }, [graphText]);
+  }, [graphText, workflow.graph]);
 
   const save = async () => {
     if (parseError) {

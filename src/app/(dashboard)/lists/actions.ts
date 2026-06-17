@@ -19,7 +19,9 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'list';
 }
 
-export async function createList(_prev: any, formData: FormData) {
+export type ListActionState = { ok: boolean; error?: string };
+
+export async function createList(_prev: ListActionState, formData: FormData): Promise<ListActionState> {
   const { account } = await requireAuth();
   const parsed = createSchema.safeParse({
     name: formData.get('name'),

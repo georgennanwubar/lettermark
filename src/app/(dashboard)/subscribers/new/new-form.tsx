@@ -8,7 +8,7 @@ import {
 import { createSubscriber } from "../actions";
 
 export function NewSubscriberForm() {
-  const [state, action, pending] = useActionState(createSubscriber, { ok: false });
+  const [state, action, pending] = useActionState(createSubscriber, { ok: false, error: undefined });
   return (
     <form action={action} className="space-y-4">
       <div className="space-y-1.5">

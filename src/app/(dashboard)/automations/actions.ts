@@ -29,7 +29,9 @@ const createSchema = z.object({
   description: z.string().max(1000).optional().nullable(),
 });
 
-export async function createWorkflow(_prev: any, formData: FormData) {
+export type WorkflowActionState = { ok: boolean; error?: string };
+
+export async function createWorkflow(_prev: WorkflowActionState, formData: FormData): Promise<WorkflowActionState> {
   const { account } = await requireAuth();
   const parsed = createSchema.safeParse({
     name: formData.get('name'),

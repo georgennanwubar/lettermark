@@ -9,6 +9,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { subscribers, forms } from "@/lib/db/schema";
 import { verifyTracking } from "@/lib/email/tracking";
+import { triggerWorkflows } from "@/lib/automation/runner";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ export default async function ConfirmPage({ searchParams }: PageProps) {
       .update(subscribers)
       .set({ status: "subscribed", confirmAt: new Date() })
       .where(eq(subscribers.id, sub.id));
+    await triggerWorkflows(sub.accountId, "signup", sub.id);
   }
 
   const form = await db.query.forms.findFirst({ where: eq(forms.id, formId) });

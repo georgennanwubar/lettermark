@@ -2,7 +2,9 @@
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
-import { updateAccount } from "./actions";
+import { updateAccount, type AccountActionState } from "./actions";
+
+const initial: AccountActionState = { ok: false };
 
 interface Props {
   name: string;
@@ -12,7 +14,7 @@ interface Props {
 }
 
 export function AccountForm(props: Props) {
-  const [state, action, pending] = useActionState(updateAccount, { ok: false } as any);
+  const [state, action, pending] = useActionState(updateAccount, initial);
   return (
     <form action={action} className="space-y-4">
       <div className="space-y-1.5">

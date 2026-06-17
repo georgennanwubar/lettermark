@@ -46,17 +46,15 @@ export async function recordBounce(opts: {
         .set({ status: 'hard_bounced', updatedAt: new Date() })
         .where(eq(subscribers.id, sub.id));
     } else {
-      // Count soft bounces; after 3, treat as hard.
+      // Count soft bounces; after 3, escalate to hard_bounced.
       const [{ n }] = await db
         .select({ n: sql<number>`COUNT(*)::int` })
         .from(actionBounces)
         .where(and(eq(actionBounces.subscriberId, sub.id), eq(actionBounces.hard, false)));
-      if (Number(n) >= 3) {
-        await db
-          .update(subscribers)
-          .set({ status: 'soft_bounced', updatedAt: new Date() })
-          .where(eq(subscribers.id, sub.id));
-      }
+      await db
+        .update(subscribers)
+        .set({ status: Number(n) >= 3 ? 'hard_bounced' : 'soft_bounced', updatedAt: new Date() })
+        .where(eq(subscribers.id, sub.id));
     }
 
     if (opts.campaignId) {

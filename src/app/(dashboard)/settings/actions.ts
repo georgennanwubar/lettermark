@@ -21,7 +21,12 @@ const accountSchema = z.object({
   defaultReplyTo: z.string().email().max(191).optional().nullable(),
 });
 
-export async function updateAccount(_prev: any, formData: FormData) {
+export type AccountActionState = { ok: boolean; error?: string };
+
+export async function updateAccount(
+  _prev: AccountActionState,
+  formData: FormData,
+): Promise<AccountActionState> {
   const { account } = await requireAuth();
   const parsed = accountSchema.safeParse({
     name: formData.get('name'),

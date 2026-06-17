@@ -67,6 +67,11 @@ export default async function HostedSubscribePage({ params, searchParams }: Page
           </div>
         ) : (
           <form action="/api/subscribe" method="post" className="mt-6 space-y-4">
+            {sp.status === "error" && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                That didn&apos;t work — check your email address and try again.
+              </div>
+            )}
             <input type="hidden" name="formId" value={form.id} />
             {/* Honeypot — hidden from real users, often filled by bots */}
             <input

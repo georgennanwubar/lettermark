@@ -11,7 +11,7 @@ import { createWorkflow } from "./actions";
 
 export function CreateWorkflowButton() {
   const [open, setOpen] = React.useState(false);
-  const [state, action, pending] = useActionState(createWorkflow, { ok: false } as any);
+  const [state, action, pending] = useActionState(createWorkflow, { ok: false });
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button><Plus className="mr-1 h-4 w-4" />New automation</Button></DialogTrigger>

@@ -12,7 +12,9 @@ const createSchema = z.object({
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
 });
 
-export async function createTag(_prev: any, formData: FormData) {
+export type TagActionState = { ok: boolean; error?: string };
+
+export async function createTag(_prev: TagActionState, formData: FormData): Promise<TagActionState> {
   const { account } = await requireAuth();
   const parsed = createSchema.safeParse({
     name: formData.get('name'),

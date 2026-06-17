@@ -5,7 +5,7 @@ import { Textarea, Label } from "@/components/ui/input";
 import { importSubscribers } from "../actions";
 
 export function ImportForm() {
-  const [state, action, pending] = useActionState(importSubscribers, { ok: false } as any);
+  const [state, action, pending] = useActionState(importSubscribers, { ok: false });
   return (
     <form action={action} className="space-y-4">
       <div className="space-y-1.5">
@@ -24,7 +24,7 @@ export function ImportForm() {
       {state?.ok && (
         <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           Imported {state.inserted} subscriber{state.inserted === 1 ? "" : "s"}.{" "}
-          {state.skipped > 0 && `Skipped ${state.skipped} (already on the list or invalid).`}
+          {!!state.skipped && state.skipped > 0 && `Skipped ${state.skipped} (already on the list or invalid).`}
         </div>
       )}
       <Button type="submit" disabled={pending}>{pending ? "Importing…" : "Import"}</Button>

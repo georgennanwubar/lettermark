@@ -61,5 +61,5 @@ USER nextjs
 EXPOSE 3000
 
 # Default to running the web server. Override CMD for the worker:
-#   docker run ... <image> node --experimental-strip-types scripts/worker.ts
+#   docker run ... <image> node_modules/.bin/tsx scripts/worker.ts
 CMD ["node", "server.js"]

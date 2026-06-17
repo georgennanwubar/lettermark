@@ -8,6 +8,7 @@
  *   Run: `pnpm queue:worker`
  *   Stop: SIGINT (Ctrl-C) — finishes the current iteration cleanly.
  */
+import 'dotenv/config';
 import { drainOnce } from '../src/lib/queue/sender';
 import { advanceDueRuns } from '../src/lib/automation/runner';
 

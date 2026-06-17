@@ -5,6 +5,7 @@
  * Idempotent: re-running won't create duplicates beyond what existed before.
  * Credentials printed at the end — used for first login.
  */
+import 'dotenv/config';
 import { Pool } from 'pg';
 import argon2 from 'argon2';
 import { drizzle } from 'drizzle-orm/node-postgres';
