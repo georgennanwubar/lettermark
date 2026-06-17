@@ -3,64 +3,93 @@
 @tailwind utilities;
 
 /*
- * globals.css — design tokens defined as CSS variables.
- * Light + dark themes share the same names so components can stay theme-agnostic.
- * Numbers are HSL channel values (no comma) so Tailwind can compose alpha:
- *   bg-background  -> background-color: hsl(var(--background))
- *   bg-background/50  -> background-color: hsl(var(--background) / 0.5)
+ * globals.css — Lettermark design tokens.
+ * Palette: Sapphire (#1C4FC4) · Cloud (#F8F9FF) · Abyss (#1A1A2E)
+ * Semantic tokens stored as bare HSL channel triplets so Tailwind alpha
+ * composes: hsl(var(--primary) / 0.22)
  */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 224 71% 4%;
-    --card: 0 0% 100%;
-    --card-foreground: 224 71% 4%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 224 71% 4%;
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 220 14% 96%;
-    --accent-foreground: 224 71% 4%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 221 83% 53%;
-    --radius: 0.5rem;
+    /* ---- Brand palette (resolved hex, for direct CSS use) ---- */
+    --c-sapphire:        #1C4FC4;
+    --c-cloud:           #F8F9FF;
+    --c-violet:          #5B2FBE;
+    --c-haze:            #E8ECF8;
+    --c-abyss:           #1A1A2E;
+    --c-dusk:            #5C6080;
+    --c-mist:            #C8D0E8;
+    --c-error:           #C0392B;
 
-    /* Chart palette (Recharts) */
-    --chart-1: 221 83% 53%;
-    --chart-2: 142 71% 45%;
-    --chart-3: 38 92% 50%;
-    --chart-4: 280 65% 60%;
+    /* Sapphire interaction ramp */
+    --c-sapphire-hover:  #1741A8;
+    --c-sapphire-active: #132F7A;
+
+    /* Sidebar chrome (always dark, even in light mode) */
+    --c-sidebar:         #1A1A2E;
+    --c-sidebar-surface: #22223A;
+
+    /* ---- Semantic tokens — HSL channel triplets (light theme) ---- */
+    --background:              230 100% 99%;  /* Cloud  */
+    --foreground:              240  28% 14%;  /* Abyss  */
+    --card:                      0   0% 100%; /* white  */
+    --card-foreground:         240  28% 14%;
+    --popover:                   0   0% 100%;
+    --popover-foreground:      240  28% 14%;
+    --primary:                 221  75% 44%;  /* Sapphire */
+    --primary-foreground:      230 100% 99%;  /* Cloud    */
+    --secondary:               228  43% 95%;  /* Haze     */
+    --secondary-foreground:    240  28% 14%;
+    --muted:                   228  43% 95%;
+    --muted-foreground:        232  17% 43%;  /* Dusk     */
+    --accent:                  228  43% 95%;
+    --accent-foreground:       240  28% 14%;
+    --destructive:               5  64% 46%;  /* Error    */
+    --destructive-foreground:    0   0% 100%;
+    --border:                  225  41% 85%;  /* Mist     */
+    --input:                   225  41% 85%;
+    --ring:                    221  75% 44%;  /* Sapphire */
+    --radius:                  0.375rem;      /* 6px base */
+
+    /* Chart palette — Sapphire-led, Violet accent */
+    --chart-1: 221 75% 44%;
+    --chart-2: 142 71% 40%;
+    --chart-3:  38 92% 50%;
+    --chart-4: 262 61% 46%;
     --chart-5: 340 75% 55%;
+
+    /* Semantic status (badges, accents) */
+    --success: 152 60% 36%;
+    --warning:  33 92% 47%;
+    --info:    205 90% 45%;
+
+    /* Elevation — soft, low-spread on Cloud canvas */
+    --shadow-sm: 0 1px 2px 0 hsl(240 28% 14% / 0.05);
+    --shadow-md: 0 4px 12px -2px hsl(240 28% 14% / 0.10), 0 2px 4px -2px hsl(240 28% 14% / 0.06);
+    --shadow-lg: 0 12px 28px -6px hsl(240 28% 14% / 0.16), 0 4px 8px -4px hsl(240 28% 14% / 0.08);
   }
 
+  /* ---- Dark theme ---- */
   .dark {
-    --background: 224 71% 4%;
-    --foreground: 210 40% 98%;
-    --card: 224 71% 6%;
-    --card-foreground: 210 40% 98%;
-    --popover: 224 71% 6%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 217 91% 60%;
+    --background:              240  28%  8%;
+    --foreground:              230 100% 99%;
+    --card:                    240  28% 11%;
+    --card-foreground:         230 100% 99%;
+    --popover:                 240  28% 11%;
+    --popover-foreground:      230 100% 99%;
+    --primary:                 221  83% 60%;
+    --primary-foreground:      240  28%  8%;
+    --secondary:               240  22% 18%;
+    --secondary-foreground:    230 100% 99%;
+    --muted:                   240  22% 18%;
+    --muted-foreground:        225  20% 60%;
+    --accent:                  240  22% 18%;
+    --accent-foreground:       230 100% 99%;
+    --destructive:               5  64% 52%;
+    --destructive-foreground:    0   0% 100%;
+    --border:                  240  20% 22%;
+    --input:                   240  20% 22%;
+    --ring:                    221  83% 60%;
   }
 
   * {
@@ -75,7 +104,7 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* Better focus ring for keyboard users only */
+  /* Keyboard-only focus ring — 2px Sapphire, 2px offset */
   :focus-visible {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
@@ -83,11 +112,11 @@
 }
 
 @layer utilities {
-  /* Hide scrollbar but keep scrollability — useful in horizontal scrollers */
+  /* Hide scrollbar, keep scroll */
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-  /* Subtle grid background for empty editor canvases */
+  /* 24px dot/line grid for the empty campaign editor canvas */
   .bg-grid {
     background-image:
       linear-gradient(to right, hsl(var(--border) / 0.5) 1px, transparent 1px),
@@ -96,7 +125,7 @@
   }
 }
 
-/* Reduce motion */
+/* Honour prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

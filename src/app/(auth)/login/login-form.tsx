@@ -1,7 +1,3 @@
-/**
- * login/login-form.tsx — Client component using useFormState to surface
- * server-action validation errors inline.
- */
 "use client";
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
@@ -16,8 +12,8 @@ export function LoginForm() {
   return (
     <form action={formAction} className="space-y-4">
       <div className="space-y-1.5">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" autoComplete="email" required autoFocus />
+        <Label htmlFor="email">Email address</Label>
+        <Input id="email" name="email" type="email" autoComplete="email" required autoFocus placeholder="you@example.com" />
         {state.fieldErrors?.email && (
           <p className="text-xs text-destructive">{state.fieldErrors.email}</p>
         )}
@@ -37,7 +33,7 @@ export function LoginForm() {
       )}
 
       <Button type="submit" className="w-full" disabled={pending}>
-        {pending ? "Signing in…" : "Sign in"}
+        {pending ? "Logging in…" : "Log in"}
       </Button>
     </form>
   );

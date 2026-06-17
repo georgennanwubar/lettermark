@@ -4,7 +4,7 @@
 
 ---
 
-## Last updated: 2026-06-17
+## Last updated: 2026-06-17 (Session 3)
 
 ---
 
@@ -16,15 +16,17 @@ The two-line architecture: a JSON block-based email editor produces an `EmailDoc
 
 ---
 
-## Current state (2026-06-17)
+## Current state (2026-06-17, Session 3)
 
-The app is **fully working**. All compile errors, functional bugs, and startup issues have been resolved across two sessions.
+The app is **fully working** and now has the **Lettermark design system applied**. All compile errors and functional bugs were resolved in sessions 1–2. Session 3 was a visual/styling pass only — no schema or route changes.
 
 - `pnpm typecheck` — zero errors
 - `pnpm lint` — zero errors/warnings
 - `pnpm build` — all 38 routes compile and emit
 - `pnpm db:migrate` + `pnpm db:seed` — verified on live Postgres
 - `pnpm dev` — starts in ~20s (Turbopack), serves on `http://localhost:3000`
+
+**Design system:** Imported from [Lettermark Design System](https://claude.ai/design/p/3f5507eb-975a-410d-8e5b-d18730c37ef1) on Claude Design. Tokens, branding, sidebar, auth layout, and table/empty-state refinements all applied. The app is now named **Lettermark** throughout.
 
 **Environment:** Developer is on Windows + WSL2. Project lives on `D:\Projects\NewsletterApp` (mounted at `/mnt/d/Projects/NewsletterApp` in WSL2). All commands are run from WSL2. IntelliJ IDEA is the IDE on Windows.
 
@@ -174,3 +176,6 @@ Starting from an uncompiled codebase, fixed all issues to reach a green build an
 
 ### Session 2 — 2026-06-17 (startup fixes + dev environment setup)
 Diagnosed and fixed exit-code-1 on `pnpm install` due to pnpm 11's default block on native build scripts. Fixed `.env` loading for operational scripts. Guided first-time WSL2 setup. See `CHANGELOG.md` for full details.
+
+### Session 3 — 2026-06-17 (Lettermark design system implementation)
+Imported the Lettermark Design System from Claude Design (`3f5507eb-975a-410d-8e5b-d18730c37ef1`). Applied full token set (Sapphire/Cloud/Abyss palette, 6px radius, design-system shadows), dark Abyss sidebar with correct interaction states, `<LettermarkIcon>` brand mark, redesigned auth layout (Cloud canvas + cloud motifs + large centered logo), Instrument Serif font, and table/analytics refinements. Renamed "Postmark" → "Lettermark" throughout. See `CHANGELOG.md` for full details.

@@ -9,6 +9,49 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.3.0] — 2026-06-17 — Lettermark Design System implementation (Session 3)
+
+Design-system styling pass. The app is imported from the **Lettermark Design System** project on Claude Design (`3f5507eb-975a-410d-8e5b-d18730c37ef1`) and all visual tokens, brand marks, and UI patterns are applied to the live codebase. Zero new routes or schema changes — this is a pure visual layer.
+
+### Added
+
+- **`src/components/ui/lettermark-icon.tsx`** — `<LettermarkIcon>` React component built from the locked SVG artwork (Sapphire rounded-square + white double-L bookmark mark). Accepts `size` and `white` props.
+
+### Changed — Design tokens
+
+- **`src/app/globals.css`** — Full Lettermark token set replacing the generic shadcn defaults:
+  - Palette: Sapphire `#1C4FC4` (primary), Cloud `#F8F9FF` (background), Abyss `#1A1A2E` (foreground + sidebar), Haze `#E8ECF8` (secondary/muted), Dusk `#5C6080` (muted-foreground), Mist `#C8D0E8` (border/input), Error `#C0392B` (destructive).
+  - `--radius` changed from `0.5rem` → `0.375rem` (6px base).
+  - Added `--c-*` hex convenience vars for direct CSS use (sidebar, sidebar-surface, all brand colours).
+  - Added `--shadow-sm/md/lg` — soft Abyss-tinted shadows for the Cloud canvas.
+  - Dark theme updated to match design system values.
+
+- **`tailwind.config.ts`** — Updated to use design system vars:
+  - `borderRadius.md` → `var(--radius)` (6px — buttons, inputs); `borderRadius.lg` → `0.6875rem` (11px — dialogs); `borderRadius.xl` → `0.75rem` (12px — auth card).
+  - `boxShadow` overridden to use `var(--shadow-sm/md/lg)`.
+  - Chart colour tokens added (`chart-1` through `chart-5`).
+  - Instrument Serif added to `fontFamily.display`.
+
+### Changed — Branding
+
+- **`src/components/layout/sidebar.tsx`** — Dark Abyss sidebar (`#1A1A2E`) replacing the light `bg-card` surface. Nav link states updated for dark surface: `text-white/70` default → `bg-white/[0.06] text-white` hover → `bg-primary/[0.22]` + inset Sapphire border active + Sapphire icon. Dusk (`#5C6080`) section labels. White avatar chip. `Mail` icon swapped for `<LettermarkIcon>`. "Postmark" → "Lettermark".
+- **`src/app/(auth)/layout.tsx`** — Replaced header-bar layout with full Cloud canvas + 4 faint Sapphire cloud SVG motifs. Large 44px `<LettermarkIcon>` + 38px "Lettermark" wordmark above a `rounded-xl` card surface. "Postmark" → "Lettermark".
+- **`src/app/(dashboard)/layout.tsx`** — Mobile header updated: `Mail` → `<LettermarkIcon>`, "Postmark" → "Lettermark", `bg-background/80 backdrop-blur` sticky header.
+- **`src/app/layout.tsx`** — Metadata renamed to Lettermark. `themeColor` updated to Cloud `#F8F9FF` / Abyss `#1A1A2E`. Instrument Serif loaded via `next/font`.
+
+### Changed — Copy & microcopy
+
+- **`src/app/(auth)/login/page.tsx`** — "Sign in to your workspace" → "Log in to your Lettermark account".
+- **`src/app/(auth)/login/login-form.tsx`** — "Sign in" / "Signing in…" → "Log in" / "Logging in…". Added `placeholder` on email field.
+- **`src/app/(auth)/register/page.tsx`** — "Create your workspace" → "Create your account". "Sign in" link → "Log in".
+
+### Changed — UI refinements
+
+- **`src/components/ui/table.tsx`** — `TableHeader` gets `bg-muted/60` Haze fill (per design spec: "header rows sit on a Haze fill"). `EmptyState` no longer has a dashed border — plain centred block with `p-12`.
+- **`src/app/(dashboard)/analytics/page.tsx`** — KPI metric values now render in Sapphire (`text-primary`) at `text-[28px]` matching the design system's analytics KPI style.
+
+---
+
 ## [0.2.0] — 2026-06-17 — Startup fixes & dev environment setup
 
 ### Fixed

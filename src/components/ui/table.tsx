@@ -18,7 +18,7 @@ export const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTM
 Table.displayName = "Table";
 
 export const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(
-  ({ className, ...props }, ref) => <thead ref={ref} className={cn("[&_tr]:border-b border-border", className)} {...props} />,
+  ({ className, ...props }, ref) => <thead ref={ref} className={cn("bg-muted/60 [&_tr]:border-b border-border", className)} {...props} />,
 );
 TableHeader.displayName = "TableHeader";
 
@@ -130,7 +130,7 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center rounded-lg border border-dashed border-border p-8 text-center", className)}>
+    <div className={cn("flex flex-col items-center justify-center p-12 text-center", className)}>
       {icon && <div className="mb-3 text-muted-foreground/60">{icon}</div>}
       <h3 className="text-sm font-medium">{title}</h3>
       {description && <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>}

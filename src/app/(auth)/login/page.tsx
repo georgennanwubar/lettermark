@@ -1,17 +1,14 @@
-/**
- * login/page.tsx — Server component, renders the client form.
- */
 import Link from "next/link";
 import { LoginForm } from "./login-form";
 
-export const metadata = { title: "Sign in" };
+export const metadata = { title: "Log in" };
 
 export default function LoginPage() {
   return (
     <div>
-      <div className="mb-6 space-y-1.5 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
-        <p className="text-sm text-muted-foreground">Sign in to your workspace</p>
+      <div className="mb-6 space-y-1">
+        <h2 className="text-xl font-semibold tracking-tight">Welcome back</h2>
+        <p className="text-sm text-muted-foreground">Log in to your Lettermark account</p>
       </div>
       <LoginForm />
       <p className="mt-6 text-center text-sm text-muted-foreground">
