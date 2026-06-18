@@ -9,6 +9,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.4.0] — 2026-06-18 — Fix campaign edit 404 (Session 4)
+
+### Fixed
+
+- **`/campaigns/[id]/edit` returning 404** — `getCampaign()` in `src/server/queries.ts` was using Drizzle's relational query API (`db.query.campaigns.findFirst()`) which was silently returning `null` for valid campaigns. The underlying cause: Turbopack's file watcher does not fire `inotify` events for files on the NTFS-mounted Windows drive (`/mnt/d/`), so the dev server from session 3 was still running a stale compiled version of the function. Fixed by:
+  1. Rewriting `getCampaign` to use the standard Drizzle select API (`db.select().from(campaigns).where(...)`) — matching the pattern already used by `listCampaigns` and confirmed working.
+  2. Restarting the dev server so all source files are re-read from disk.
+  
+  The campaign block editor now loads correctly at `/campaigns/[id]/edit` and the full three-pane editor (block palette, live MJML preview, structure tree) renders as expected.
+
+### Known dev environment caveat
+
+WSL2 projects stored on the Windows filesystem (`/mnt/d/`, `/mnt/c/`, etc.) do not trigger `inotify` file change events. This means `next dev` (Turbopack or webpack) will NOT pick up file edits via HMR when the project lives on a Windows NTFS drive. Workaround: restart the dev server after making changes in Claude Code (which edits files via the WSL2 mount). If files are moved to the WSL2 native filesystem (e.g., `~/projects/`), HMR works normally.
+
+---
+
 ## [0.3.0] — 2026-06-17 — Lettermark Design System implementation (Session 3)
 
 Design-system styling pass. The app is imported from the **Lettermark Design System** project on Claude Design (`3f5507eb-975a-410d-8e5b-d18730c37ef1`) and all visual tokens, brand marks, and UI patterns are applied to the live codebase. Zero new routes or schema changes — this is a pure visual layer.

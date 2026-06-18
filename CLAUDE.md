@@ -4,7 +4,7 @@
 
 ---
 
-## Last updated: 2026-06-17 (Session 3)
+## Last updated: 2026-06-18 (Session 4)
 
 ---
 
@@ -16,9 +16,9 @@ The two-line architecture: a JSON block-based email editor produces an `EmailDoc
 
 ---
 
-## Current state (2026-06-17, Session 3)
+## Current state (2026-06-18, Session 4)
 
-The app is **fully working** and now has the **Lettermark design system applied**. All compile errors and functional bugs were resolved in sessions 1–2. Session 3 was a visual/styling pass only — no schema or route changes.
+The app is **fully working** and now has the **Lettermark design system applied**. All compile errors and functional bugs were resolved in sessions 1–2. Session 3 applied the full design system. Session 4 fixed the campaign edit page 404.
 
 - `pnpm typecheck` — zero errors
 - `pnpm lint` — zero errors/warnings
@@ -179,3 +179,6 @@ Diagnosed and fixed exit-code-1 on `pnpm install` due to pnpm 11's default block
 
 ### Session 3 — 2026-06-17 (Lettermark design system implementation)
 Imported the Lettermark Design System from Claude Design (`3f5507eb-975a-410d-8e5b-d18730c37ef1`). Applied full token set (Sapphire/Cloud/Abyss palette, 6px radius, design-system shadows), dark Abyss sidebar with correct interaction states, `<LettermarkIcon>` brand mark, redesigned auth layout (Cloud canvas + cloud motifs + large centered logo), Instrument Serif font, and table/analytics refinements. Renamed "Postmark" → "Lettermark" throughout. See `CHANGELOG.md` for full details.
+
+### Session 4 — 2026-06-18 (fix campaign edit 404)
+Fixed 404 on `/campaigns/[id]/edit`. Root cause: `getCampaign()` in `src/server/queries.ts` used `db.query.campaigns.findFirst()` (Drizzle relational API) which returned null — the underlying cause is WSL2's NTFS file watcher: the dev server from session 3 was stale and running an older compiled version of the query. Fixed by rewriting the query to use `db.select().from(campaigns).where(...)` (the same API used successfully by `listCampaigns`). Also documented the WSL2 NTFS inotify limitation: file changes to `/mnt/d/` are not propagated to the running dev server; a restart is required after file edits. See `CHANGELOG.md` for details.

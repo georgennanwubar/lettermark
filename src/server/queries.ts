@@ -156,9 +156,12 @@ export async function listCampaigns(accountId: number, opts: { status?: string; 
 }
 
 export async function getCampaign(accountId: number, id: number) {
-  return db.query.campaigns.findFirst({
-    where: and(eq(campaigns.accountId, accountId), eq(campaigns.id, id)),
-  });
+  const [row] = await db
+    .select()
+    .from(campaigns)
+    .where(and(eq(campaigns.accountId, accountId), eq(campaigns.id, id)))
+    .limit(1);
+  return row ?? null;
 }
 
 export async function getCampaignAnalytics(accountId: number, campaignId: number) {
