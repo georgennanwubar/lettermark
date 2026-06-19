@@ -258,70 +258,76 @@ export function CampaignEditor({ campaign, initialDocument }: Props) {
               <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="blocks" className="flex-1 overflow-y-auto px-3 pb-3">
-              <div className="mb-4 space-y-1">
-                <div className="px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add a block</div>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {BLOCK_LIBRARY.filter((b) => b.type !== "section").map((b) => (
-                    <button
-                      key={b.type}
-                      type="button"
-                      onClick={() => {
-                        // Add into the first section, or create one if none
-                        const root = doc.root;
-                        let target = root.children.find((c) => c.type === "section");
-                        if (!target) {
-                          const section = newBlock("section") as any;
-                          const newDoc = insertChild(doc, [], section);
-                          target = section;
-                          updateDoc(insertChild(newDoc, [newDoc.root.children.length - 1], newBlock(b.type)));
-                        } else {
-                          const idx = root.children.indexOf(target);
-                          updateDoc(insertChild(doc, [idx], newBlock(b.type)));
-                        }
-                      }}
-                      className="flex flex-col items-center gap-1 rounded-md border border-border bg-background p-2.5 text-xs transition-colors hover:bg-secondary"
-                    >
-                      <b.icon className="h-4 w-4 text-muted-foreground" />
-                      <span>{b.label}</span>
-                    </button>
-                  ))}
+            <TabsContent value="blocks" className="flex flex-1 min-h-0 flex-col">
+              {/* Scrollable top: block library + structure tree */}
+              <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3">
+                <div className="mb-4 space-y-1">
+                  <div className="px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add a block</div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {BLOCK_LIBRARY.filter((b) => b.type !== "section").map((b) => (
+                      <button
+                        key={b.type}
+                        type="button"
+                        onClick={() => {
+                          // Add into the first section, or create one if none
+                          const root = doc.root;
+                          let target = root.children.find((c) => c.type === "section");
+                          if (!target) {
+                            const section = newBlock("section") as any;
+                            const newDoc = insertChild(doc, [], section);
+                            target = section;
+                            updateDoc(insertChild(newDoc, [newDoc.root.children.length - 1], newBlock(b.type)));
+                          } else {
+                            const idx = root.children.indexOf(target);
+                            updateDoc(insertChild(doc, [idx], newBlock(b.type)));
+                          }
+                        }}
+                        className="flex flex-col items-center gap-1 rounded-md border border-border bg-background p-2.5 text-xs transition-colors hover:bg-secondary"
+                      >
+                        <b.icon className="h-4 w-4 text-muted-foreground" />
+                        <span>{b.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => updateDoc(insertChild(doc, [], newBlock("section")))}
+                    className="mt-2 flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border p-2 text-xs text-muted-foreground hover:bg-secondary"
+                  >
+                    <Plus className="h-3.5 w-3.5" />Add new section
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => updateDoc(insertChild(doc, [], newBlock("section")))}
-                  className="mt-2 flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border p-2 text-xs text-muted-foreground hover:bg-secondary"
-                >
-                  <Plus className="h-3.5 w-3.5" />Add new section
-                </button>
-              </div>
 
-              <div className="space-y-1">
-                <div className="px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Structure</div>
-                <BlockTree
-                  block={doc.root}
-                  path={[]}
-                  selected={selected}
-                  onSelect={setSelected}
-                  onMove={(p, d) => updateDoc(moveAtPath(doc, p, d))}
-                  onRemove={(p) => { updateDoc(removeAtPath(doc, p)); setSelected(null); }}
-                />
-              </div>
-
-              {selectedBlock && selected && (
-                <div className="mt-4 space-y-2 border-t border-border pt-4">
-                  <div className="px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Edit block</div>
-                  <BlockInspector
-                    block={selectedBlock}
-                    onChange={(attrs) =>
-                      updateDoc(updateAtPath(doc, selected, (b: any) => ({ ...b, attrs: { ...b.attrs, ...attrs } })))
-                    }
+                <div className="space-y-1">
+                  <div className="px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Structure</div>
+                  <BlockTree
+                    block={doc.root}
+                    path={[]}
+                    selected={selected}
+                    onSelect={setSelected}
+                    onMove={(p, d) => updateDoc(moveAtPath(doc, p, d))}
+                    onRemove={(p) => { updateDoc(removeAtPath(doc, p)); setSelected(null); }}
                   />
+                </div>
+              </div>
+
+              {/* Pinned bottom: block inspector, independently scrollable */}
+              {selectedBlock && selected && (
+                <div className="max-h-[40vh] shrink-0 overflow-y-auto border-t border-border px-3 pb-3 pt-3">
+                  <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Edit block</div>
+                  <div className="space-y-2">
+                    <BlockInspector
+                      block={selectedBlock}
+                      onChange={(attrs) =>
+                        updateDoc(updateAtPath(doc, selected, (b: any) => ({ ...b, attrs: { ...b.attrs, ...attrs } })))
+                      }
+                    />
+                  </div>
                 </div>
               )}
             </TabsContent>
 
-            <TabsContent value="settings" className="flex-1 overflow-y-auto px-3 pb-3">
+            <TabsContent value="settings" className="flex-1 min-h-0 overflow-y-auto px-3 pb-3">
               <div className="space-y-3">
                 <Field label="Preheader" hint="The preview line in the inbox">
                   <Input value={meta.preheader} onChange={(e) => { setMeta({ ...meta, preheader: e.target.value }); setDirty(true); }} />
@@ -491,6 +497,8 @@ function BlockInspector({ block, onChange }: { block: AnyBlock; onChange: (attrs
           <div className="grid grid-cols-2 gap-2">
             <Field label="Padding top"><Input type="number" value={a.paddingTop ?? 24} onChange={(e) => onChange({ paddingTop: Number(e.target.value) })} /></Field>
             <Field label="Padding bottom"><Input type="number" value={a.paddingBottom ?? 24} onChange={(e) => onChange({ paddingBottom: Number(e.target.value) })} /></Field>
+            <Field label="Padding left"><Input type="number" value={a.paddingLeft ?? 32} onChange={(e) => onChange({ paddingLeft: Number(e.target.value) })} /></Field>
+            <Field label="Padding right"><Input type="number" value={a.paddingRight ?? 32} onChange={(e) => onChange({ paddingRight: Number(e.target.value) })} /></Field>
           </div>
         </>
       );

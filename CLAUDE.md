@@ -4,7 +4,7 @@
 
 ---
 
-## Last updated: 2026-06-18 (Session 4)
+## Last updated: 2026-06-19 (Session 5)
 
 ---
 
@@ -16,15 +16,24 @@ The two-line architecture: a JSON block-based email editor produces an `EmailDoc
 
 ---
 
-## Current state (2026-06-18, Session 4)
+## Current state (2026-06-19, Session 5)
 
-The app is **fully working** and now has the **Lettermark design system applied**. All compile errors and functional bugs were resolved in sessions 1–2. Session 3 applied the full design system. Session 4 fixed the campaign edit page 404.
+The app is **fully working** and now has the **Lettermark design system applied**. All compile errors and functional bugs were resolved in sessions 1–2. Session 3 applied the full design system. Session 4 fixed the campaign edit page 404. Session 5 worked on the campaign editor inspector scroll bug (see open issue below).
 
 - `pnpm typecheck` — zero errors
 - `pnpm lint` — zero errors/warnings
 - `pnpm build` — all 38 routes compile and emit
 - `pnpm db:migrate` + `pnpm db:seed` — verified on live Postgres
 - `pnpm dev` — starts in ~20s (Turbopack), serves on `http://localhost:3000`
+
+### Open issue — campaign editor inspector scroll (carry over from Session 5)
+
+When selecting a block in the campaign editor, the "Edit block" inspector panel in the left sidebar should scroll independently when its attributes overflow. Multiple fix attempts were made:
+- Attempt 1: Added `min-h-0` to `TabsContent` elements — did not resolve it.
+- Attempt 2: Restructured into two-zone layout (scrollable top + pinned inspector bottom) with `max-h-[45%] overflow-y-auto` — did not resolve it.
+- Attempt 3 (current code): Changed `max-h-[45%]` → `max-h-[40vh]` to use viewport-height units, which are always definite and bypass the flex-chain percentage resolution issue. Also added missing `paddingLeft`/`paddingRight` fields to the section block inspector.
+
+The CSS compiles correctly (`max-height: 40vh` and `overflow-y: auto` confirmed in the bundle). **The fix was not browser-verified** because Playwright Chromium requires `libnspr4.so`/`libnss3.so` which are absent from this WSL2 environment and sudo is unavailable to install them. Resume testing in Session 6 by opening the campaign editor, selecting a block, and confirming the inspector scrolls.
 
 **Design system:** Imported from [Lettermark Design System](https://claude.ai/design/p/3f5507eb-975a-410d-8e5b-d18730c37ef1) on Claude Design. Tokens, branding, sidebar, auth layout, and table/empty-state refinements all applied. The app is now named **Lettermark** throughout.
 
@@ -182,3 +191,6 @@ Imported the Lettermark Design System from Claude Design (`3f5507eb-975a-410d-8e
 
 ### Session 4 — 2026-06-18 (fix campaign edit 404)
 Fixed 404 on `/campaigns/[id]/edit`. Root cause: `getCampaign()` in `src/server/queries.ts` used `db.query.campaigns.findFirst()` (Drizzle relational API) which returned null — the underlying cause is WSL2's NTFS file watcher: the dev server from session 3 was stale and running an older compiled version of the query. Fixed by rewriting the query to use `db.select().from(campaigns).where(...)` (the same API used successfully by `listCampaigns`). Also documented the WSL2 NTFS inotify limitation: file changes to `/mnt/d/` are not propagated to the running dev server; a restart is required after file edits. See `CHANGELOG.md` for details.
+
+### Session 5 — 2026-06-19 (campaign editor inspector scroll — in progress)
+Worked on making the block inspector panel in the campaign editor (`src/components/editor/campaign-editor.tsx`) scrollable when block attributes overflow. Restructured the Blocks tab into a two-zone flex layout: scrollable top zone (block library + structure tree) and pinned bottom zone (inspector). Final attempt uses `max-h-[40vh] overflow-y-auto` on the inspector panel (viewport units, always definite). Also added missing `paddingLeft`/`paddingRight` inputs to the section block inspector. **Not confirmed working in browser** — browser testing blocked by missing WSL2 system libraries. Continue in Session 6.

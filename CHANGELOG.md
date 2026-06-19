@@ -9,6 +9,21 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.5.0-wip] — 2026-06-19 — Campaign editor inspector scroll (Session 5, in progress)
+
+### Changed
+
+- **`src/components/editor/campaign-editor.tsx`** — Restructured the Blocks tab content into two independent scroll zones:
+  - **Top zone** (`flex-1 min-h-0 overflow-y-auto`): block library grid + structure tree. Scrolls independently.
+  - **Bottom zone** (`max-h-[40vh] shrink-0 overflow-y-auto`): "Edit block" inspector, pinned to the bottom of the sidebar and visible without scrolling past the block library. Uses viewport-height units (`40vh`) rather than a percentage so the constraint is always definite regardless of the flex chain, fixing `overflow-y: auto` not triggering when `max-height: 45%` silently resolved to `none`.
+- **Section block inspector** — Added `Padding left` and `Padding right` number inputs. These attrs (`paddingLeft`, `paddingRight`) existed in section defaults but were not previously editable in the UI.
+
+### Status
+
+Fix applied and CSS confirmed compiled correctly. **Not browser-verified** — Playwright Chromium requires `libnspr4.so` / `libnss3.so` absent from this WSL2 environment. Verify in Session 6: open campaign editor → select any block → confirm the "Edit block" panel scrolls when attributes overflow.
+
+---
+
 ## [0.4.0] — 2026-06-18 — Fix campaign edit 404 (Session 4)
 
 ### Fixed
