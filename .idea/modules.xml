@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/NewsletterApp.iml" filepath="$PROJECT_DIR$/NewsletterApp.iml" />
+      <module fileurl="file://$PROJECT_DIR$/lettermark.iml" filepath="$PROJECT_DIR$/lettermark.iml" />
     </modules>
   </component>
 </project>
