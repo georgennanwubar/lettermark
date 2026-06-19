@@ -251,14 +251,14 @@ export function CampaignEditor({ campaign, initialDocument }: Props) {
       {/* Body */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left panel — blocks + inspector */}
-        <aside className="hidden w-80 shrink-0 flex-col border-r border-border bg-card md:flex">
-          <Tabs defaultValue="blocks" className="flex flex-1 flex-col">
+        <aside className="hidden w-80 shrink-0 flex-col overflow-hidden border-r border-border bg-card md:flex">
+          <Tabs defaultValue="blocks" className="flex min-h-0 flex-1 flex-col">
             <TabsList className="m-3 self-start">
               <TabsTrigger value="blocks">Blocks</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="blocks" className="flex flex-1 min-h-0 flex-col">
+            <TabsContent value="blocks" className="flex flex-1 min-h-0 flex-col overflow-hidden">
               {/* Scrollable top: block library + structure tree */}
               <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3">
                 <div className="mb-4 space-y-1">
@@ -313,7 +313,7 @@ export function CampaignEditor({ campaign, initialDocument }: Props) {
 
               {/* Pinned bottom: block inspector, independently scrollable */}
               {selectedBlock && selected && (
-                <div className="max-h-[40vh] shrink-0 overflow-y-auto border-t border-border px-3 pb-3 pt-3">
+                <div className="max-h-[45%] shrink-0 overflow-y-auto border-t border-border px-3 pb-3 pt-3">
                   <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Edit block</div>
                   <div className="space-y-2">
                     <BlockInspector

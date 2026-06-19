@@ -9,18 +9,37 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [0.5.0-wip] — 2026-06-19 — Campaign editor inspector scroll (Session 5, in progress)
+## [0.5.0] — 2026-06-19 — Campaign editor inspector scroll (Sessions 5–6)
 
-### Changed
+### Fixed
 
-- **`src/components/editor/campaign-editor.tsx`** — Restructured the Blocks tab content into two independent scroll zones:
-  - **Top zone** (`flex-1 min-h-0 overflow-y-auto`): block library grid + structure tree. Scrolls independently.
-  - **Bottom zone** (`max-h-[40vh] shrink-0 overflow-y-auto`): "Edit block" inspector, pinned to the bottom of the sidebar and visible without scrolling past the block library. Uses viewport-height units (`40vh`) rather than a percentage so the constraint is always definite regardless of the flex chain, fixing `overflow-y: auto` not triggering when `max-height: 45%` silently resolved to `none`.
-- **Section block inspector** — Added `Padding left` and `Padding right` number inputs. These attrs (`paddingLeft`, `paddingRight`) existed in section defaults but were not previously editable in the UI.
+- **Campaign editor inspector panel clipped with no scrollbar** (`src/components/editor/campaign-editor.tsx`). When a block was selected in the structure tree, the "Edit block" inspector showed some fields but cut off the rest with no scrollbar.
 
-### Status
+  **Root cause (Round 1):** Two missing CSS properties broke the flex height-propagation chain. `aside` lacked `overflow-hidden`, so browsers did not treat its cross-axis-stretched height as "definite" for flex children. `Tabs` lacked `min-h-0`, preventing it from shrinking below content height. Together these caused the top zone (`flex-1`) to expand to its full content height, pushing the inspector below the viewport boundary where it was clipped with no scrollbar.
 
-Fix applied and CSS confirmed compiled correctly. **Not browser-verified** — Playwright Chromium requires `libnspr4.so` / `libnss3.so` absent from this WSL2 environment. Verify in Session 6: open campaign editor → select any block → confirm the "Edit block" panel scrolls when attributes overflow.
+  **Root cause (Round 2):** Even with Round 1 in place, `max-h-[40vh]` was unreliable — viewport-relative units can coincide with content size, leaving exactly zero scroll headroom. Switched to `max-h-[45%]` (percentage of the definitively-sized `TabsContent` parent) so the constraint always sits below the parent boundary. Also added `overflow-hidden` to `TabsContent` as defence.
+
+  **Final fix applied to `src/components/editor/campaign-editor.tsx`:**
+  - `aside`: added `overflow-hidden`
+  - `Tabs`: added `min-h-0`
+  - `TabsContent[blocks]`: added `overflow-hidden` + `min-h-0`
+  - Inspector div: `max-h-[40vh]` → `max-h-[45%]`
+
+### Changed (Session 5)
+
+- **Blocks tab restructured into two independent scroll zones:**
+  - Top zone (`flex-1 min-h-0 overflow-y-auto`): block library + structure tree
+  - Bottom zone (`max-h-[45%] shrink-0 overflow-y-auto`): "Edit block" inspector, pinned to sidebar bottom
+- **Section block inspector** — Added `Padding left` and `Padding right` number inputs (attrs existed in defaults but had no UI).
+
+### Verified (Session 6)
+
+Browser-verified via Playwright chromium_headless_shell with `LD_LIBRARY_PATH` pointing at `libnspr4.so`/`libnss3.so` extracted from `.deb` packages (no sudo). Results at 900×700 viewport:
+
+- **Heading block:** Text ✅, Level ✅, Align ✅ — all 3 fields visible; inspector `overflow-y: auto`, `clientH=258 scrollH=260`
+- **Section block:** Background color ✅, Padding top ✅, Padding bottom ✅, Padding left ✅, Padding right ✅ — all 5 fields; `clientH=258 scrollH=268 overflow-y: auto`
+- **Scrollbar activation:** At 500px-tall viewport, heading inspector hits `clientH=168 scrollH=260` → `hasScroll: true` — scrollbar appears correctly when content overflows
+- **App-wide scan:** Grep of all source files found no other nested-flex scroll patterns that need fixing. Dashboard pages use simple `overflow-y-auto` on the main scroll wrapper; nav sidebar has `nav.flex-1.overflow-y-auto` — both correct.
 
 ---
 
