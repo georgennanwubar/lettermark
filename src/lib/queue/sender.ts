@@ -64,31 +64,51 @@ export async function enqueueCampaign(campaignId: number): Promise<number> {
   const excludeLists = audience.excludeLists ?? [];
   const excludeTags = audience.excludeTags ?? [];
 
-  // Build a subquery of eligible subscriber ids.
-  // Subscriber must be `subscribed`, belong to the campaign's account, and
-  // satisfy at least one list/tag include (or "everyone" if none specified).
+  // Drizzle's sql template expands plain JS arrays element-by-element, so
+  // ${[]} becomes () (empty parens) which is invalid SQL in ANY().
+  // Solution: use sql.param() for arrays (passes them as a single pg parameter
+  // serialised as a Postgres array literal) and skip clauses when empty.
+
+  const allSubscribersMode = includeLists.length === 0 && includeTags.length === 0;
+
+  // Include condition — only needed when specific lists/tags were chosen
+  const includeUnion = !allSubscribersMode
+    ? sql.join(
+        [
+          ...(includeLists.length > 0
+            ? [sql`SELECT subscriber_id FROM ${listSubscribers} WHERE list_id = ANY(${sql.param(includeLists)}::bigint[])`]
+            : []),
+          ...(includeTags.length > 0
+            ? [sql`SELECT subscriber_id FROM ${tagSubscribers} WHERE tag_id = ANY(${sql.param(includeTags)}::bigint[])`]
+            : []),
+        ],
+        sql` UNION `,
+      )
+    : null;
+
+  // Exclude condition — only needed when exclusion lists/tags are set
+  const excludeUnion =
+    excludeLists.length > 0 || excludeTags.length > 0
+      ? sql.join(
+          [
+            ...(excludeLists.length > 0
+              ? [sql`SELECT subscriber_id FROM ${listSubscribers} WHERE list_id = ANY(${sql.param(excludeLists)}::bigint[])`]
+              : []),
+            ...(excludeTags.length > 0
+              ? [sql`SELECT subscriber_id FROM ${tagSubscribers} WHERE tag_id = ANY(${sql.param(excludeTags)}::bigint[])`]
+              : []),
+          ],
+          sql` UNION `,
+        )
+      : null;
+
   const recipientRows = await db.execute<{ id: number }>(sql`
     SELECT DISTINCT s.id
     FROM ${subscribers} s
     WHERE s.account_id = ${camp.accountId}
       AND s.status = 'subscribed'
-      AND (
-        ${includeLists.length === 0 && includeTags.length === 0}
-        OR s.id IN (
-          SELECT subscriber_id FROM ${listSubscribers}
-          WHERE list_id = ANY(${includeLists}::bigint[])
-          UNION
-          SELECT subscriber_id FROM ${tagSubscribers}
-          WHERE tag_id = ANY(${includeTags}::bigint[])
-        )
-      )
-      AND s.id NOT IN (
-        SELECT subscriber_id FROM ${listSubscribers}
-        WHERE list_id = ANY(${excludeLists}::bigint[])
-        UNION
-        SELECT subscriber_id FROM ${tagSubscribers}
-        WHERE tag_id = ANY(${excludeTags}::bigint[])
-      )
+      ${includeUnion ? sql`AND s.id IN (${includeUnion})` : sql``}
+      ${excludeUnion ? sql`AND s.id NOT IN (${excludeUnion})` : sql``}
   `);
 
   const ids = recipientRows.rows.map((r) => r.id);
