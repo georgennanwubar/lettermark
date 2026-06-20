@@ -4,7 +4,7 @@
  */
 import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth/session";
-import { getCampaign } from "@/server/queries";
+import { getCampaign, listLists } from "@/server/queries";
 import { emptyDocument, type EmailDocument } from "@/lib/email/blocks";
 import { CampaignEditor } from "@/components/editor/campaign-editor";
 
@@ -19,7 +19,10 @@ export default async function CampaignEditPage({ params }: PageProps) {
   if (!Number.isFinite(id)) notFound();
 
   const { account } = await requireAuth();
-  const c = await getCampaign(account.id, id);
+  const [c, allLists] = await Promise.all([
+    getCampaign(account.id, id),
+    listLists(account.id),
+  ]);
   if (!c) notFound();
 
   const doc = (c.contentJson as EmailDocument | null) ?? emptyDocument();
@@ -33,8 +36,10 @@ export default async function CampaignEditPage({ params }: PageProps) {
         fromName: c.fromName ?? "",
         fromEmail: c.fromEmail ?? "",
         replyTo: c.replyTo ?? "",
+        audience: c.audience ?? null,
       }}
       initialDocument={doc}
+      lists={allLists}
     />
   );
 }

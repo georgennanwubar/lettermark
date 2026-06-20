@@ -12,8 +12,9 @@ import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, EmptyState,
 } from "@/components/ui/table";
-import { ListChecks, Trash2 } from "lucide-react";
+import { ListChecks, Pencil, Trash2 } from "lucide-react";
 import { formatDate, formatNumber } from "@/lib/utils/cn";
+import Link from "next/link";
 import { CreateListButton } from "./create-button";
 import { deleteList } from "./actions";
 
@@ -57,18 +58,23 @@ export default async function ListsPage() {
                   {rows.map((l) => (
                     <TableRow key={l.id}>
                       <TableCell>
-                        <div className="font-medium">{l.name}</div>
+                        <Link href={`/lists/${l.id}`} className="font-medium hover:underline">{l.name}</Link>
                         {l.description && <div className="text-xs text-muted-foreground">{l.description}</div>}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{formatNumber(l.subscriberCount)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{formatDate(l.createdAt)}</TableCell>
                       <TableCell className="text-right">
-                        <form action={deleteList}>
-                          <input type="hidden" name="id" value={l.id} />
-                          <Button type="submit" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10">
-                            <Trash2 className="h-4 w-4" />
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" asChild>
+                            <Link href={`/lists/${l.id}`}><Pencil className="h-4 w-4" /></Link>
                           </Button>
-                        </form>
+                          <form action={deleteList}>
+                            <input type="hidden" name="id" value={l.id} />
+                            <Button type="submit" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </form>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

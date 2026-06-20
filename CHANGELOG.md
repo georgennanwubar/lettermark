@@ -9,6 +9,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.6.0] — 2026-06-20 — List audience targeting + editable lists + send fix (Session 7)
+
+### Fixed
+
+- **`sendCampaign` server action error** — Converted all `db.query.*` relational API calls to `db.select()` in the send path (`src/app/(dashboard)/campaigns/actions.ts`, `src/lib/queue/sender.ts`). The relational API can silently return `null` on a stale dev server (WSL2/NTFS inotify limitation from Session 4), causing `enqueueCampaign` to throw `Campaign not found`. Now uses the same `db.select().from().where().limit(1)` pattern as the already-reliable `getCampaign` query. Also added an explicit guard: if campaign is already in a non-sendable state when the action fires, it redirects to the detail page instead of throwing.
+
+### Added
+
+- **Send campaign to specific lists** — Campaigns now have a list audience picker in the editor Settings tab. Users select one or more lists; unselected = send to all subscribed contacts. The selection is saved in `campaigns.audience.lists` (existing JSONB column). Changes:
+  - `campaigns/actions.ts`: `updateCampaign` now accepts and persists `audience` payload
+  - `components/editor/campaign-editor.tsx`: new Audience section in Settings tab with checkboxes per list, subscriber count shown, `selectedLists` state wired to save
+  - `campaigns/[id]/edit/page.tsx`: fetches available lists + passes `audience` to editor
+  - `campaigns/[id]/page.tsx`: shows audience list names (or "All subscribers") in Details card
+  - `enqueueCampaign` in `sender.ts` was already audience-aware; no changes needed there
+
+- **Editable lists** — New page at `/lists/[id]` lets users rename a list, edit its description, view current members, add subscribers not yet in the list, and remove members. Changes:
+  - `src/app/(dashboard)/lists/[id]/page.tsx`: new server component with settings form + members table + add-subscriber table
+  - `src/app/(dashboard)/lists/actions.ts`: added `updateList`, `addToList`, `removeFromList` server actions
+  - `src/server/queries.ts`: added `getList`, `getListMembers`, `getSubscribersNotInList` queries
+  - `src/app/(dashboard)/lists/page.tsx`: list name is now a link to the edit page; added edit icon button per row
+
+---
+
 ## [0.5.0] — 2026-06-19 — Campaign editor inspector scroll (Sessions 5–6)
 
 ### Fixed

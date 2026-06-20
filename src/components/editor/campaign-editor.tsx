@@ -30,7 +30,7 @@ import {
 import {
   ArrowLeft, Save, Eye, Smartphone, Monitor, Plus, Trash2, ChevronUp, ChevronDown,
   Heading1, Type, ImageIcon, Minus, MousePointerClick, Code, Share2, Box,
-  Variable,
+  Variable, ListChecks,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -122,12 +122,18 @@ function getAtPath(doc: EmailDocument, path: number[]): any {
   return target;
 }
 
+interface AvailableList { id: number; name: string; subscriberCount: number }
+
 interface Props {
-  campaign: { id: number; subject: string; preheader: string; fromName: string; fromEmail: string; replyTo: string };
+  campaign: {
+    id: number; subject: string; preheader: string; fromName: string; fromEmail: string; replyTo: string;
+    audience?: { lists?: number[]; tags?: number[]; excludeLists?: number[]; excludeTags?: number[] } | null;
+  };
   initialDocument: EmailDocument;
+  lists?: AvailableList[];
 }
 
-export function CampaignEditor({ campaign, initialDocument }: Props) {
+export function CampaignEditor({ campaign, initialDocument, lists = [] }: Props) {
   const [doc, setDoc] = React.useState<EmailDocument>(initialDocument);
   const [meta, setMeta] = React.useState({
     subject: campaign.subject,
@@ -136,6 +142,7 @@ export function CampaignEditor({ campaign, initialDocument }: Props) {
     fromEmail: campaign.fromEmail,
     replyTo: campaign.replyTo,
   });
+  const [selectedLists, setSelectedLists] = React.useState<number[]>(campaign.audience?.lists ?? []);
   const [selected, setSelected] = React.useState<number[] | null>(null);
   const [device, setDevice] = React.useState<"desktop" | "mobile">("desktop");
   const [previewHtml, setPreviewHtml] = React.useState<string>("");
@@ -181,6 +188,7 @@ export function CampaignEditor({ campaign, initialDocument }: Props) {
         fromEmail: meta.fromEmail || undefined,
         replyTo: meta.replyTo || undefined,
         contentJson: doc,
+        audience: { lists: selectedLists },
       });
       if (r.ok) {
         toast.success("Campaign saved");
@@ -193,7 +201,7 @@ export function CampaignEditor({ campaign, initialDocument }: Props) {
     } finally {
       setSaving(false);
     }
-  }, [campaign.id, doc, meta]);
+  }, [campaign.id, doc, meta, selectedLists]);
 
   // Cmd-S / Ctrl-S
   React.useEffect(() => {
@@ -328,7 +336,7 @@ export function CampaignEditor({ campaign, initialDocument }: Props) {
             </TabsContent>
 
             <TabsContent value="settings" className="flex-1 min-h-0 overflow-y-auto px-3 pb-3">
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <Field label="Preheader" hint="The preview line in the inbox">
                   <Input value={meta.preheader} onChange={(e) => { setMeta({ ...meta, preheader: e.target.value }); setDirty(true); }} />
                 </Field>
@@ -341,7 +349,50 @@ export function CampaignEditor({ campaign, initialDocument }: Props) {
                 <Field label="Reply-to (optional)">
                   <Input type="email" value={meta.replyTo} onChange={(e) => { setMeta({ ...meta, replyTo: e.target.value }); setDirty(true); }} />
                 </Field>
-                <div className="mt-6 rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+
+                {/* Audience — list selection */}
+                <div className="rounded-md border border-border p-3 space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-foreground">
+                    <ListChecks className="h-3.5 w-3.5" />Audience
+                  </div>
+                  {lists.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No lists yet. <Link href="/lists" className="text-primary hover:underline">Create a list</Link> first.</p>
+                  ) : (
+                    <>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedLists.length === 0
+                          ? "Sending to all subscribed contacts."
+                          : `Sending to ${selectedLists.length} selected list${selectedLists.length > 1 ? "s" : ""}.`}
+                      </p>
+                      <div className="space-y-1.5 pt-1">
+                        {lists.map((list) => {
+                          const checked = selectedLists.includes(list.id);
+                          return (
+                            <label key={list.id} className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 hover:bg-secondary">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 rounded border-border accent-primary"
+                                checked={checked}
+                                onChange={(e) => {
+                                  setSelectedLists(
+                                    e.target.checked
+                                      ? [...selectedLists, list.id]
+                                      : selectedLists.filter((id) => id !== list.id)
+                                  );
+                                  setDirty(true);
+                                }}
+                              />
+                              <span className="flex-1 text-xs">{list.name}</span>
+                              <span className="text-xs text-muted-foreground">{list.subscriberCount}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
                   <strong className="font-semibold text-foreground">Merge tags</strong>
                   <p className="mt-1">Use <code className="rounded bg-muted px-1">{`{firstname | "there"}`}</code> in any block to personalize. System tags: <code>{`{unsubscribe}`}</code>, <code>{`{webversion}`}</code>, <code>{`{date}`}</code>.</p>
                 </div>

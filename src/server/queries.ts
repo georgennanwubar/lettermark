@@ -23,8 +23,9 @@ import {
   forms,
   workflows,
   queue,
+  listSubscribers as listSubsTable,
 } from "@/lib/db/schema";
-import { and, eq, gte, sql, desc, count } from "drizzle-orm";
+import { and, eq, gte, sql, desc, count, notExists } from "drizzle-orm";
 
 /* ----- Helpers -------------------------------------------------------------- */
 
@@ -250,6 +251,64 @@ export async function listLists(accountId: number) {
     .from(lists)
     .where(eq(lists.accountId, accountId))
     .orderBy(desc(lists.createdAt));
+}
+
+export async function getList(accountId: number, listId: number) {
+  const [row] = await db
+    .select({
+      id: lists.id,
+      name: lists.name,
+      slug: lists.slug,
+      description: lists.description,
+      createdAt: lists.createdAt,
+      subscriberCount: sql<number>`(SELECT COUNT(*)::int FROM list_subscribers ls WHERE ls.list_id = ${lists.id})`,
+    })
+    .from(lists)
+    .where(and(eq(lists.accountId, accountId), eq(lists.id, listId)))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getListMembers(accountId: number, listId: number) {
+  return db
+    .select({
+      id: subscribers.id,
+      email: subscribers.email,
+      firstName: subscribers.firstName,
+      lastName: subscribers.lastName,
+      status: subscribers.status,
+      addedAt: listSubsTable.addedAt,
+    })
+    .from(listSubsTable)
+    .innerJoin(subscribers, eq(subscribers.id, listSubsTable.subscriberId))
+    .where(and(eq(listSubsTable.listId, listId), eq(subscribers.accountId, accountId)))
+    .orderBy(desc(listSubsTable.addedAt));
+}
+
+export async function getSubscribersNotInList(accountId: number, listId: number, search?: string) {
+  const conds = [eq(subscribers.accountId, accountId)];
+  if (search) conds.push(sql`(${subscribers.email} ILIKE ${`%${search}%`} OR ${subscribers.firstName} ILIKE ${`%${search}%`} OR ${subscribers.lastName} ILIKE ${`%${search}%`})`);
+
+  return db
+    .select({
+      id: subscribers.id,
+      email: subscribers.email,
+      firstName: subscribers.firstName,
+      lastName: subscribers.lastName,
+      status: subscribers.status,
+    })
+    .from(subscribers)
+    .where(
+      and(
+        ...conds,
+        notExists(
+          db.select({ x: sql`1` }).from(listSubsTable)
+            .where(and(eq(listSubsTable.listId, listId), eq(listSubsTable.subscriberId, subscribers.id)))
+        )
+      )
+    )
+    .orderBy(subscribers.email)
+    .limit(100);
 }
 
 export async function listTags(accountId: number) {

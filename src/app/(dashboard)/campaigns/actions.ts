@@ -1,12 +1,5 @@
 'use server';
 
-/**
- * campaigns/actions.ts — Server actions for campaign mutations.
- *
- * Keeping these in the route folder (vs a global /actions) so each page
- * collocates the mutations it triggers — easier to follow.
- */
-
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { and, eq } from 'drizzle-orm';
@@ -53,6 +46,13 @@ export async function createCampaign(_prev: ActionResult, formData: FormData): P
   redirect(`/campaigns/${row.id}/edit`);
 }
 
+const audienceSchema = z.object({
+  lists: z.array(z.number()).optional(),
+  tags: z.array(z.number()).optional(),
+  excludeLists: z.array(z.number()).optional(),
+  excludeTags: z.array(z.number()).optional(),
+}).optional();
+
 const updateSchema = z.object({
   id: z.coerce.number().int(),
   subject: z.string().max(998).optional(),
@@ -63,6 +63,7 @@ const updateSchema = z.object({
   contentJson: z.any().optional(),
   trackOpens: z.boolean().optional(),
   trackClicks: z.boolean().optional(),
+  audience: audienceSchema,
 });
 
 export async function updateCampaign(payload: z.infer<typeof updateSchema>): Promise<ActionResult> {
@@ -70,9 +71,8 @@ export async function updateCampaign(payload: z.infer<typeof updateSchema>): Pro
   const parsed = updateSchema.safeParse(payload);
   if (!parsed.success) return { ok: false, error: 'Invalid update payload' };
 
-  const { id, contentJson, ...rest } = parsed.data;
+  const { id, contentJson, audience, ...rest } = parsed.data;
 
-  // Render fresh HTML if content changed
   let contentHtml: string | undefined;
   let contentText: string | undefined;
   if (contentJson) {
@@ -86,6 +86,7 @@ export async function updateCampaign(payload: z.infer<typeof updateSchema>): Pro
     .set({
       ...rest,
       ...(contentJson ? { contentJson, contentHtml, contentText } : {}),
+      ...(audience !== undefined ? { audience } : {}),
       updatedAt: new Date(),
     })
     .where(and(eq(campaigns.id, id), eq(campaigns.accountId, account.id)));
@@ -100,17 +101,23 @@ export async function sendCampaign(formData: FormData): Promise<void> {
   const id = Number(formData.get('id'));
   if (!Number.isFinite(id)) return;
 
-  // Verify ownership
-  const c = await db.query.campaigns.findFirst({
-    where: and(eq(campaigns.id, id), eq(campaigns.accountId, account.id)),
-  });
+  // Use db.select() (not the relational API) — more reliable in this context.
+  const [c] = await db
+    .select()
+    .from(campaigns)
+    .where(and(eq(campaigns.id, id), eq(campaigns.accountId, account.id)))
+    .limit(1);
   if (!c) return;
 
-  // Materialize the queue, then mark sending. Worker picks up the queued rows.
+  if (c.status !== 'draft' && c.status !== 'scheduled') {
+    // Already sent/queued — redirect to detail page without re-enqueuing.
+    redirect(`/campaigns/${id}`);
+  }
+
   const total = await enqueueCampaign(id);
   await db
     .update(campaigns)
-    .set({ status: 'sending', totalRecipients: total, sentAt: null })
+    .set({ status: 'sending', totalRecipients: total, sentAt: null, updatedAt: new Date() })
     .where(eq(campaigns.id, id));
 
   revalidatePath('/campaigns');

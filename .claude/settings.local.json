@@ -65,7 +65,10 @@
       "Bash(pnpm remove *)",
       "Read(//home/me/**)",
       "Read(//root/**)",
-      "Read(//home/**)"
+      "Read(//home/**)",
+      "Bash(pg_ctlcluster 14 main start)",
+      "Bash(pg_ctlcluster 15 main start)",
+      "Bash(pg_ctlcluster 16 main start)"
     ]
   }
 }

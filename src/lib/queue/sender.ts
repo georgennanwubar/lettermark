@@ -48,9 +48,11 @@ import type { EmailDocument } from '@/lib/email/blocks';
  * Idempotent: ON CONFLICT DO NOTHING on (campaign_id, subscriber_id).
  */
 export async function enqueueCampaign(campaignId: number): Promise<number> {
-  const camp = await db.query.campaigns.findFirst({
-    where: eq(campaigns.id, campaignId),
-  });
+  const [camp] = await db
+    .select()
+    .from(campaigns)
+    .where(eq(campaigns.id, campaignId))
+    .limit(1);
   if (!camp) throw new Error(`Campaign ${campaignId} not found`);
   if (!['draft', 'scheduled'].includes(camp.status)) {
     throw new Error(`Campaign ${campaignId} is in state ${camp.status}, cannot enqueue`);
@@ -128,9 +130,11 @@ const providerCache = new Map<string, EmailProvider>();
 
 async function providerForCampaign(accountId: number): Promise<EmailProvider> {
   // Prefer account-configured default provider, fall back to env config.
-  const provider = await db.query.emailProviders.findFirst({
-    where: and(eq(emailProviders.accountId, accountId), eq(emailProviders.isDefault, true)),
-  });
+  const [provider] = await db
+    .select()
+    .from(emailProviders)
+    .where(and(eq(emailProviders.accountId, accountId), eq(emailProviders.isDefault, true)))
+    .limit(1);
   if (!provider) return makeEnvProvider();
   const key = `acct:${accountId}:p:${provider.id}`;
   const cached = providerCache.get(key);
@@ -190,7 +194,7 @@ export async function drainOnce(opts: DrainOptions = {}): Promise<DrainResult> {
   }
 
   for (const [campaignId, rows] of byCampaign) {
-    const camp = await db.query.campaigns.findFirst({ where: eq(campaigns.id, campaignId) });
+    const [camp] = await db.select().from(campaigns).where(eq(campaigns.id, campaignId)).limit(1);
     if (!camp || !camp.contentJson) {
       failed += rows.length;
       await db
@@ -206,9 +210,7 @@ export async function drainOnce(opts: DrainOptions = {}): Promise<DrainResult> {
     // Build / fetch link rows for the campaign so click-tracking IDs are stable.
     // (Naive version: regex every URL out of the HTML and upsert.)
     const urls = uniqueUrls(rendered.html);
-    let linkRows = await db.query.links.findMany({
-      where: eq(linksTable.campaignId, campaignId),
-    });
+    let linkRows = await db.select().from(linksTable).where(eq(linksTable.campaignId, campaignId));
     const knownUrls = new Set(linkRows.map((l) => l.url));
     const newUrls = urls.filter((u) => !knownUrls.has(u));
     if (newUrls.length > 0) {
@@ -224,9 +226,11 @@ export async function drainOnce(opts: DrainOptions = {}): Promise<DrainResult> {
 
     for (const row of rows) {
       try {
-        const sub = await db.query.subscribers.findFirst({
-          where: eq(subscribers.id, row.subscriber_id),
-        });
+        const [sub] = await db
+          .select()
+          .from(subscribers)
+          .where(eq(subscribers.id, row.subscriber_id))
+          .limit(1);
         if (!sub) {
           await db.update(queue).set({ state: 'skipped' }).where(eq(queue.id, row.id));
           failed++;

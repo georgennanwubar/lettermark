@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAuth } from "@/lib/auth/session";
-import { getCampaignAnalytics } from "@/server/queries";
+import { getCampaignAnalytics, listLists } from "@/server/queries";
 import { PageHeader, PageBody } from "@/components/layout/topbar";
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription, Badge, Separator,
@@ -25,10 +25,14 @@ export default async function CampaignDetailPage({ params }: PageProps) {
   if (!Number.isFinite(id)) notFound();
 
   const { account } = await requireAuth();
-  const data = await getCampaignAnalytics(account.id, id);
+  const [data, allLists] = await Promise.all([
+    getCampaignAnalytics(account.id, id),
+    listLists(account.id),
+  ]);
   if (!data) notFound();
 
   const { campaign: c, sent, opens, uniqueOpens, clicks, uniqueClicks, bounces, unsubs, pending } = data;
+  const audienceLists = allLists.filter((l) => (c.audience as any)?.lists?.includes(l.id));
   const denom = sent || 1;
 
   const canSend = c.status === "draft" || c.status === "scheduled";
@@ -96,6 +100,11 @@ export default async function CampaignDetailPage({ params }: PageProps) {
               {c.sentAt && <KV label="Sent">{formatDate(c.sentAt)}</KV>}
               <KV label="Open tracking">{c.trackOpens ? "Enabled" : "Disabled"}</KV>
               <KV label="Click tracking">{c.trackClicks ? "Enabled" : "Disabled"}</KV>
+              <KV label="Audience">
+                {audienceLists.length > 0
+                  ? audienceLists.map((l) => l.name).join(", ")
+                  : "All subscribers"}
+              </KV>
 
               <Separator />
               <form action={deleteCampaign}>
