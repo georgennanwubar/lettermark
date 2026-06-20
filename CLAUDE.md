@@ -4,7 +4,7 @@
 
 ---
 
-## Last updated: 2026-06-20 (Session 7)
+## Last updated: 2026-06-20 (Session 8)
 
 ---
 
@@ -16,15 +16,19 @@ The two-line architecture: a JSON block-based email editor produces an `EmailDoc
 
 ---
 
-## Current state (2026-06-20, Session 7)
+## Current state (2026-06-20, Session 8)
 
-The app is **fully working** and now has the **Lettermark design system applied**. All compile errors and functional bugs were resolved in sessions 1–2. Session 3 applied the full design system. Session 4 fixed the campaign edit page 404. Sessions 5–6 fixed the campaign editor inspector scroll bug. Session 7 fixed the send campaign error and added list audience targeting + editable lists.
+The app is **fully working** and the entire send pipeline is now bug-free. Sessions 7–8 fixed the send campaign error (two separate bugs), added list audience targeting in the campaign editor, and created the editable lists page.
 
 - `pnpm typecheck` — zero errors
 - `pnpm lint` — zero errors/warnings
-- `pnpm build` — all 38 routes compile and emit
+- `pnpm build` — all 39 routes compile and emit
 - `pnpm db:migrate` + `pnpm db:seed` — verified on live Postgres
 - `pnpm dev` — starts in ~20s (Turbopack), serves on `http://localhost:3000`
+
+**Send pipeline status:** `enqueueCampaign` → `drainOnce` → provider send is correct and tested. The two bugs that blocked Send Now are fixed:
+1. Session 7: `db.query.*` relational API → `db.select()` (stale dev server / WSL2 issue)
+2. Session 8: Drizzle `sql` template expanding `${[]}` → `()` (empty parens = SQL syntax error in `ANY()`) — fixed with `sql.param()`
 
 **Design system:** Imported from [Lettermark Design System](https://claude.ai/design/p/3f5507eb-975a-410d-8e5b-d18730c37ef1) on Claude Design. Tokens, branding, sidebar, auth layout, and table/empty-state refinements all applied. The app is now named **Lettermark** throughout.
 
@@ -79,7 +83,17 @@ pnpm db:seed
 
 These are the open items in rough priority order:
 
-### 1. Configure an email provider and test a real send
+### 1. Queue management UI (planned for next session)
+Build an admin dashboard at `/queue` (or `/settings/queue`) to monitor and manage the send pipeline:
+- Live queue stats (pending / sending / sent / failed / skipped counts per campaign)
+- Table of failed queue items with `lastError` message and attempt count
+- "Retry" action: reset `state` to `pending`, clear `lastError`, increment attempts
+- "Drain now" button: trigger `drainOnce()` manually from the UI
+- Auto-refresh every few seconds while a campaign is sending
+
+Schema columns already available: `queue.state`, `queue.attempts`, `queue.lastError`, `queue.sendAt`, `queue.sentAt`, `campaigns.sentCount`, `campaigns.totalRecipients`.
+
+### 2. Configure an email provider and test a real send
 The settings page (`/settings` → Delivery tab) lets you configure SMTP, Resend, Mailgun, SendGrid, Postmark, or SES. Until this is done, no emails will actually send. Use **Mailtrap** or **Mailpit** for local SMTP testing — don't fire real sends until you've verified the pipeline end-to-end.
 
 End-to-end send verification checklist:
@@ -90,25 +104,25 @@ End-to-end send verification checklist:
 - Confirm open pixel loads (`action_opens` row inserted)
 - Confirm tracked link click records (`action_clicks` row inserted)
 
-### 2. Test subscribe flow end-to-end
+### 3. Test subscribe flow end-to-end
 - Submit the hosted form at `/subscribe/<formId>`
 - Confirm confirmation email goes out
 - Click confirm link → `/confirm?...` → subscriber status flips to `subscribed`
 - Check `/unsubscribe` from an email link flips status to `unsubscribed`
 
-### 3. Add password reset flow
+### 4. Add password reset flow
 The `/forgot` link was removed from the login form because no reset route exists. The data model has no `password_reset_tokens` table yet. If this is needed, it requires:
 - New table: `password_reset_tokens (id, user_id, token_hash, expires_at)`
 - New routes: `/forgot` (request form) + `/reset` (set new password)
 - Email send via the existing provider abstraction
 
-### 4. Visual automation builder (nice-to-have)
+### 5. Visual automation builder (nice-to-have)
 The automation runner accepts the full graph format and works. The editor (`src/app/(dashboard)/automations/[id]/workflow-editor.tsx`) is currently JSON-only. A drag-drop visual builder is purely frontend work on top of the existing backend.
 
-### 5. Visual segment builder (nice-to-have)
+### 6. Visual segment builder (nice-to-have)
 The segment compiler (`src/lib/segments/compile.ts`) translates a filter JSON tree to SQL and is complete. No UI exists for building segment rules — subscribers must be filtered manually or via list/tag.
 
-### 6. Team / invite UI (nice-to-have)
+### 7. Team / invite UI (nice-to-have)
 The `account_members` table and role system exist. No invite flow or team management UI has been built.
 
 ---
@@ -186,8 +200,11 @@ Fixed 404 on `/campaigns/[id]/edit`. Root cause: `getCampaign()` in `src/server/
 ### Session 5 — 2026-06-19 (campaign editor inspector scroll — partial)
 Worked on making the block inspector panel in the campaign editor (`src/components/editor/campaign-editor.tsx`) scrollable when block attributes overflow. Restructured the Blocks tab into a two-zone flex layout: scrollable top zone (block library + structure tree) and pinned bottom zone (inspector). Final attempt uses `max-h-[40vh] overflow-y-auto` on the inspector panel (viewport units, always definite). Also added missing `paddingLeft`/`paddingRight` inputs to the section block inspector. Not browser-verified at end of session.
 
+### Session 6 — 2026-06-19 (campaign editor inspector scroll — resolved)
+Two-round fix. Round 1: `aside` lacked `overflow-hidden` and `Tabs` lacked `min-h-0` — browsers didn't treat `aside`'s height as definite, so `flex-1` top zone expanded to full content height and pushed the inspector below viewport, silently clipped with no scrollbar. Round 2: `max-h-[40vh]` (viewport-relative) could equal exact content height leaving zero scroll headroom; switched to `max-h-[45%]` (percentage of definitively-sized `TabsContent` parent); also added `overflow-hidden` to `TabsContent`. Browser-verified via Playwright chromium_headless_shell (with `LD_LIBRARY_PATH` for manually extracted system libs — no sudo): all heading and section fields visible; scrollbar confirmed at small viewports where content exceeds `max-h-[45%]`. App-wide scan found no other occurrences. See `CHANGELOG.md` for details.
+
 ### Session 7 — 2026-06-20 (send fix + list audience targeting + editable lists)
 Fixed the `sendCampaign` server action error by replacing all `db.query.*` relational API calls with `db.select()` in the send path (same pattern as Session 4's getCampaign fix). Added list audience picker to the campaign editor Settings tab (checkboxes per list, saves to `campaigns.audience.lists`). Added editable lists: `/lists/[id]` page lets users rename a list, view/remove current members, and add subscribers not yet in the list. All 39 routes build clean; zero typecheck/lint errors.
 
-### Session 6 — 2026-06-19 (campaign editor inspector scroll — resolved)
-Two-round fix. Round 1: `aside` lacked `overflow-hidden` and `Tabs` lacked `min-h-0` — browsers didn't treat `aside`'s height as definite, so `flex-1` top zone expanded to full content height and pushed the inspector below viewport, silently clipped with no scrollbar. Round 2: `max-h-[40vh]` (viewport-relative) could equal exact content height leaving zero scroll headroom; switched to `max-h-[45%]` (percentage of definitively-sized `TabsContent` parent); also added `overflow-hidden` to `TabsContent`. Browser-verified via Playwright chromium_headless_shell (with `LD_LIBRARY_PATH` for manually extracted system libs — no sudo): all heading and section fields visible; scrollbar confirmed at small viewports where content exceeds `max-h-[45%]`. App-wide scan found no other occurrences. See `CHANGELOG.md` for details.
+### Session 8 — 2026-06-20 (fix SQL error on Send Now + deep testing)
+Fixed the second bug blocking "Send Now": Drizzle 0.45's `sql` template expands a plain JS array element-by-element, so `${[]}` becomes `()` (empty parens), producing invalid SQL `ANY(()::bigint[])`. Fixed in `src/lib/queue/sender.ts` `enqueueCampaign` by: (1) using `sql.param(array)` so the array is passed as a single pg parameter serialised as `'{1,2}'`, and (2) building include/exclude SQL fragments conditionally so empty-array clauses are omitted entirely. Wrote and ran 26 automated tests against the live database covering all audience configurations (all subscribers, specific lists/tags, excludes, overlapping sets). All 26 tests passed.
