@@ -9,6 +9,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.6.1] — 2026-06-20 — Fix SQL error on Send Now (Session 8)
+
+### Fixed
+
+- **SQL syntax error in `enqueueCampaign` when clicking Send Now** (`src/lib/queue/sender.ts`)
+
+  **Root cause:** Drizzle 0.45's `sql` tagged template expands plain JS arrays element-by-element into the query string. An empty array `[]` becomes `()` (empty parentheses) and `[1,2]` becomes `($1,$2)` as separate positional params. Neither form is valid for `ANY()::bigint[]` in PostgreSQL:
+  - `ANY(()::bigint[])` → **syntax error** (empty parens)
+  - `ANY(($1)::bigint[])` → **type mismatch** (scalar cast to bigint[])
+
+  **Fix:** replaced `${array}::bigint[]` with `${sql.param(array)}::bigint[]`. `sql.param()` passes the whole JS array as a single pg parameter, which the pg driver serialises as a PostgreSQL array literal (`'{1,2}'` / `'{}'`). This is valid for `ANY()` in all cases.
+
+  Also restructured the query to skip the `IN`/`NOT IN` subqueries entirely when include/exclude lists are empty — cleaner, faster, and avoids the problem class entirely for the common case.
+
+  **Verified:** 26 automated tests across all audience configurations: all-subscribers mode, single list, multi-list UNION, tag audiences, exclusions, edge cases (non-existent list, wrong account), plus status and duplicate invariants — all green.
+
+---
+
 ## [0.6.0] — 2026-06-20 — List audience targeting + editable lists + send fix (Session 7)
 
 ### Fixed
